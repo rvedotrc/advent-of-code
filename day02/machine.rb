@@ -39,10 +39,25 @@ end
 
 if $0 == __FILE__
   input = IO.read('input').chomp.split(/,/).map(&:to_i)
-  input[1] = 12
-  input[2] = 2
-  final_state = Machine.output_of(input)
-  puts final_state.first
+
+  # Part one
+  # input[1] = 12
+  # input[2] = 2
+  # final_state = Machine.output_of(input)
+  # puts final_state.first
+
+  # Part two
+  (0..99).each do |noun|
+    (0..99).each do |verb|
+      copy = input.dup
+      copy[1] = noun
+      copy[2] = verb
+      final_state = Machine.output_of(copy)
+      if final_state.first == 19690720
+        puts 100 * noun + verb
+      end
+    end
+  end
 else
   require 'rspec'
   RSpec.describe do
