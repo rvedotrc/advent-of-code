@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'set'
-
 class Wires
   def initialize
     @cells = {}
@@ -9,6 +7,7 @@ class Wires
 
   def add_path(colour, path)
     position = [0,0]
+    steps = 0
 
     path.split(/,/).each do |instruction|
       vector = case instruction[0]
@@ -27,9 +26,10 @@ class Wires
       distance = instruction[1..-1].to_i
 
       distance.times do
+        steps += 1
         new_position = position.zip(vector).map {|pairs| pairs.reduce(&:+)}
-        cell = (@cells[new_position] ||= Set.new)
-        cell.add(colour)
+        cell = (@cells[new_position] ||= {})
+        cell[colour] ||= steps
         position = new_position
       end
     end
@@ -41,10 +41,10 @@ class Wires
     end.compact
   end
 
-  def closest_intersection
+  def best_intersection
     t = all_intersections.map do |position|
-      distance = position.map(&:abs).reduce(&:+)
-      [ position, distance ]
+      steps = @cells[position].values.reduce(&:+)
+      [ position, steps ]
     end
 
     t.sort_by(&:last).first.last
@@ -58,7 +58,7 @@ if $0 == __FILE__
   input.each_with_index do |path, index|
     w.add_path(index, path.chomp)
   end
-  puts w.closest_intersection
+  puts w.best_intersection
 else
   require 'rspec'
   RSpec.describe do
@@ -66,13 +66,13 @@ else
       w = Wires.new
       w.add_path(:a, 'R75,D30,R83,U83,L12,D49,R71,U7,L72')
       w.add_path(:b, 'U62,R66,U55,R34,D71,R55,D58,R83')
-      expect(w.closest_intersection).to eq(159)
+      expect(w.best_intersection).to eq(610)
     end
     it 'tests 2' do
       w = Wires.new
       w.add_path(:a, 'R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51')        
       w.add_path(:b, 'U98,R91,D20,R16,D67,R40,U7,R15,U6,R7')
-      expect(w.closest_intersection).to eq(135)
+      expect(w.best_intersection).to eq(410)
     end
   end
 end
