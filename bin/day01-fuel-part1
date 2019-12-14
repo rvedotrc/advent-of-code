@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'fuel'
+
+masses = IO.read("input/day01").each_line.map do |t|
+  Fuel.fuel_for(t.chomp.to_f)
+end
+
+puts masses.reduce(&:+)
