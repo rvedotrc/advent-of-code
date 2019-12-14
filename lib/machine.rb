@@ -1,6 +1,18 @@
 class Machine
   Halt = Class.new(RuntimeError)
 
+  NAMES = {
+    1 => 'add',
+    2 => 'multiply',
+    3 => 'input',
+    4 => 'output',
+    5 => 'jump-if-true',
+    6 => 'jump-if-false',
+    7 => 'less than',
+    8 => 'equals',
+    99 => 'halt',
+  }
+
   def initialize(memory, inputs: [])
     @memory = memory
     @position = 0
@@ -19,6 +31,7 @@ class Machine
 
   def run_one_instruction
     instruction = peek(position)
+    # p [ instruction, NAMES[ instruction % 100 ] ]
 
     case instruction % 100
     when 1
@@ -43,6 +56,34 @@ class Machine
     when 4
       outputs << get_arg(0, instruction)
       @position += 2
+    when 5
+      if get_arg(0, instruction) != 0
+        @position = get_arg(1, instruction)
+      else
+        @position += 3
+      end
+    when 6
+      if get_arg(0, instruction) == 0
+        @position = get_arg(1, instruction)
+      else
+        @position += 3
+      end
+    when 7
+      value = if get_arg(0, instruction) < get_arg(1, instruction)
+                1
+              else
+                0
+              end
+      poke(get_position(2, instruction), value)
+      @position += 4
+    when 8
+      value = if get_arg(0, instruction) == get_arg(1, instruction)
+                1
+              else
+                0
+              end
+      poke(get_position(2, instruction), value)
+      @position += 4
     when 99
       raise Halt
     else
