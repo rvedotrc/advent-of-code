@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'wires'
+
+input = IO.read('input/day03').each_line.to_a
+w = Wires.new
+input.each_with_index do |path, index|
+  w.add_path(index, path.chomp)
+end
+puts w.fewest_intersection_steps
