@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'machine'
+
+input = IO.read('input/day09').chomp.split(/,/).map(&:to_i)
+m = Machine.new(input, inputs: [1])
+m.run
+p m.outputs

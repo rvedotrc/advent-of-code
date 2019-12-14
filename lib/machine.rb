@@ -10,6 +10,7 @@ class Machine
     6 => 'jump-if-false',
     7 => 'less than',
     8 => 'equals',
+    9 => 'adjust relative base',
     99 => 'halt',
   }
 
@@ -23,6 +24,7 @@ class Machine
   attr_reader :memory, :position, :inputs, :outputs
 
   def run
+    @relative_base = 0
     while true
       run_one_instruction
     end
@@ -84,6 +86,9 @@ class Machine
               end
       poke(get_position(2, instruction), value)
       @position += 4
+    when 9
+      @relative_base += get_arg(0, instruction)
+      @position += 2
     when 99
       raise Halt
     else
@@ -96,6 +101,8 @@ class Machine
     case mode
     when 0
       peek(@position + 1 + seq)
+    when 2
+      @relative_base + peek(@position + 1 + seq)
     else
       raise 'bad mode'
     end
@@ -109,6 +116,8 @@ class Machine
         peek( peek(@position + 1 + seq) )
       when 1
         peek(@position + 1 + seq)
+      when 2
+        peek ( @relative_base + peek(@position + 1 + seq) )
       else
         raise 'bad mode'
       end
@@ -119,6 +128,10 @@ class Machine
   end
 
   def peek(pos)
+    raise "bad position" if pos < 0
+    if pos >= memory.length
+      memory.concat([0] * (pos - memory.length + 1))
+    end
     raise "bad position" if pos < 0 or pos >= memory.length
     r = memory[pos]
     # puts "peek #{pos} => #{r}"
@@ -126,6 +139,10 @@ class Machine
   end
 
   def poke(pos, value)
+    raise "bad position #{pos} (0...#{memory.length})" if pos < 0
+    if pos >= memory.length
+      memory.concat([0] * (pos - memory.length + 1))
+    end
     raise "bad position #{pos} (0...#{memory.length})" if pos < 0 or pos >= memory.length
     memory[pos] = value
     # puts "poke #{pos}, #{value}"
