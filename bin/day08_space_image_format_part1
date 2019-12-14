@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'space_image_format'
+
+input = IO.read('input/day08').chomp
+image = SpaceImageFormat.new(stream: input, width: 25, height: 6)
+
+layer = image.layers.sort_by do |layer|
+  layer.join('').count('0')
+end.first
+
+n1 = layer.join('').count('1')
+n2 = layer.join('').count('2')
+
+puts n1 * n2

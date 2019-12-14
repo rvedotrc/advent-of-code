@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'space_image_format'
+
+input = IO.read('input/day08').chomp
+image = SpaceImageFormat.new(stream: input, width: 25, height: 6)
+layer = image.flatten
+puts *layer.map {|s| s.gsub('0', ' ')}
