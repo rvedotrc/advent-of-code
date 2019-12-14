@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'orbits'
+
+input = IO.read('input/day06')
+m = Orbits.new(input)
+p m.count
