@@ -10,7 +10,7 @@ raise "nope" unless fuel_for(1969) == 654
 raise "nope" unless fuel_for(100756) == 33583
 
 masses = $stdin.each_line.map do |t|
-  (t.chomp.to_f / 3.0).floor - 2
+  fuel_for(t.chomp.to_f)
 end
 
 puts masses.reduce(&:+)
