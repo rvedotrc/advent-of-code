@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'machine'
+
+input = IO.read('input/day02').chomp.split(/,/).map(&:to_i)
+
+(0..99).each do |noun|
+  (0..99).each do |verb|
+    copy = input.dup
+    copy[1] = noun
+    copy[2] = verb
+    final_state = Machine.output_of(copy)
+    if final_state.first == 19690720
+      puts 100 * noun + verb
+    end
+  end
+end

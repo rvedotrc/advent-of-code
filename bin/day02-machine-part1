@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'machine'
+
+input = IO.read('input/day02').chomp.split(/,/).map(&:to_i)
+
+input[1] = 12
+input[2] = 2
+final_state = Machine.output_of(input)
+puts final_state.first
