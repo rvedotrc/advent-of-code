@@ -13,11 +13,11 @@ class Machine
     99 => 'halt',
   }
 
-  def initialize(memory, inputs: [])
+  def initialize(memory, inputs: [], outputs: [])
     @memory = memory
     @position = 0
     @inputs = inputs
-    @outputs = []
+    @outputs = outputs
   end
 
   attr_reader :memory, :position, :inputs, :outputs

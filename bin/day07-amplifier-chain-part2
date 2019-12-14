@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'amplifier_chain'
+
+input = IO.read('input/day07').chomp.split(/,/).map(&:to_i)
+puts AmplifierChain.best_feedback_output(input)
