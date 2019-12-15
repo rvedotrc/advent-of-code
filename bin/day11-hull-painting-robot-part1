@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'hull_painting_robot'
+
+program = IO.read('input/day11').chomp.split(/,/).map(&:to_i)
+robot = HullPaintingRobot.new(program)
+robot.run
+p robot
+puts *robot.draw
+p robot.panels.count
+
