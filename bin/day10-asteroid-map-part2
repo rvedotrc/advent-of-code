@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'asteroid_map'
+
+input = IO.read('input/day10').lines.map(&:chomp)
+map = AsteroidMap.new(input)
+position = map.best_position.position
+sweeps = map.sweep_from(position)
+p sweeps
+p sweeps.count
+p sweeps[199]
