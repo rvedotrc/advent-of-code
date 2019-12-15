@@ -14,14 +14,14 @@ class Machine
     99 => 'halt',
   }
 
-  def initialize(memory, inputs: [], outputs: [])
+  def initialize(memory, on_input: nil, on_output: nil)
     @memory = memory
     @position = 0
-    @inputs = inputs
-    @outputs = outputs
+    @on_input = on_input
+    @on_output = on_output
   end
 
-  attr_reader :memory, :position, :inputs, :outputs
+  attr_reader :memory, :position, :on_input, :on_output
 
   def run
     @relative_base = 0
@@ -49,14 +49,15 @@ class Machine
       )
       @position += 4
     when 3
-      raise 'no more inputs' if inputs.empty?
       poke(
         get_position(0, instruction),
-        inputs.shift,
+        on_input.call,
       )
       @position += 2
     when 4
-      outputs << get_arg(0, instruction)
+      on_output.call(
+        get_arg(0, instruction)
+      )
       @position += 2
     when 5
       if get_arg(0, instruction) != 0
@@ -147,5 +148,20 @@ class Machine
     memory[pos] = value
     # puts "poke #{pos}, #{value}"
   end
+
+end
+
+class Machine::ArrayIO < Machine
+
+  def initialize(memory, inputs: [], outputs: [])
+    @inputs = inputs
+    @outputs = outputs
+    super(memory,
+          on_input: proc { inputs.shift },
+          on_output: proc { |v| outputs << v },
+         )
+  end
+
+  attr_reader :inputs, :outputs
 
 end

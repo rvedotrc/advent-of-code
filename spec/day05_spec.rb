@@ -3,7 +3,7 @@ require 'machine'
 RSpec.describe Machine do
 
   it 'inputs and outputs' do
-    m = Machine.new([3,0,4,0,99], inputs: [7])
+    m = Machine::ArrayIO.new([3,0,4,0,99], inputs: [7])
     m.run
     expect(m.outputs).to eq([7])
   end
@@ -28,7 +28,7 @@ RSpec.describe Machine do
 
   context 'part 2' do
     def run(program, input, expected_output)
-      m = Machine.new(program.dup, inputs: [input])
+      m = Machine::ArrayIO.new(program.dup, inputs: [input])
       m.run
       expect(m.outputs).to eq([expected_output])
     end

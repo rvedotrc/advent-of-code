@@ -17,7 +17,7 @@ class AmplifierChain
 
   def self.run(program, phases)
     phases.reduce(0) do |signal, phase|
-      m = Machine.new(program, inputs: [phase, signal])
+      m = Machine::ArrayIO.new(program, inputs: [phase, signal])
       m.run
       m.outputs.last
     end
@@ -102,7 +102,7 @@ class AmplifierChain
     outputs << TeeOutput.new(inputs[0], final_output)
 
     machines = inputs.zip(outputs).map do |input, output|
-      Machine.new(program.dup, inputs: input, outputs: output)
+      Machine::ArrayIO.new(program.dup, inputs: input, outputs: output)
     end
 
     threads = machines.map do |m|
