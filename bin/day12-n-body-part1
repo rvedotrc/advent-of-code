@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'n_body_universe'
+
+universe = NBodyUniverse.new
+IO.read('input/day12').each_line do |line|
+  line.match(/^<x=(.*), y=(.*), z=(.*)>$/) or raise
+  universe.add_body([ $1.to_i, $2.to_i, $3.to_i ])
+end
+
+p universe
+1000.times { universe.step }
+p universe
+puts universe.bodies.map(&:energy).reduce(&:+)
+
