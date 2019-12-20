@@ -156,12 +156,105 @@ class Machine::ArrayIO < Machine
   def initialize(memory, inputs: [], outputs: [])
     @inputs = inputs
     @outputs = outputs
-    super(memory,
-          on_input: proc { inputs.shift },
-          on_output: proc { |v| outputs << v },
-         )
+    super(
+      memory,
+      on_input: proc { inputs.shift },
+      on_output: proc { |v| outputs << v },
+     )
   end
 
   attr_reader :inputs, :outputs
+
+end
+
+class Machine::Commandable
+
+  # Imperative form of Machine
+  #
+  # machine = Machine::Commandable.new(program)
+  # machine.start
+  # machine.running?
+  # machine.input(n)
+  # machine.output # => n
+  # machine.stop
+
+  def initialize(program)
+    @machine = Machine.new(
+      program,
+      on_input: method(:on_input),
+      on_output: method(:on_output),
+    )
+    @thread = nil
+
+    @mutex = Mutex.new
+    @cond = ConditionVariable.new
+    @inputs = []
+    @outputs = []
+  end
+
+  def start
+    if @thread.nil?
+      @thread = Thread.new { @machine.run }
+    else
+      raise 'already running'
+    end
+  end
+
+  def running?
+    if @thread
+      return true if @thread.alive?
+      @thread.join
+    else
+      false
+    end
+  end
+
+  def stop
+    if @thread
+      @thread.kill
+      @thread = nil
+    else
+      raise 'not running'
+    end
+  end
+
+  def input(n)
+    raise 'not running' unless running?
+
+    @mutex.synchronize do
+      @inputs << n
+    end
+
+    nil
+  end
+
+  def output
+    raise 'not running' unless running?
+
+    @mutex.synchronize do
+      while @outputs.empty?
+        @cond.wait(@mutex)
+      end
+      @outputs.shift
+    end
+  end
+
+  private
+
+  def on_input
+    @mutex.synchronize do
+      while @inputs.empty?
+        @cond.wait(@mutex, 0.01)
+      end
+      @inputs.shift
+    end
+  end
+
+  def on_output(n)
+    @mutex.synchronize do
+      @outputs << n
+      @cond.broadcast
+    end
+  end
 
 end

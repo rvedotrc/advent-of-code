@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'repair_droid'
+
+program = IO.read('input/day15').chomp.split(/,/).map(&:to_i)
+puts RepairDroid.new(program).run
