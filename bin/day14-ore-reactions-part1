@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'ore_reactions'
+
+reactions = IO.read('input/day14')
+puts OreReactions.new(reactions).ore_required_for(1, :FUEL)
