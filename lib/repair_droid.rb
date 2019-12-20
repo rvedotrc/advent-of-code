@@ -3,18 +3,19 @@ require 'set'
 
 class RepairDroid
 
-  UNKNOWN = '?'
+  UNKNOWN = ' '
   EXPLORE = 'E'
   WALL = '#'
-  EMPTY = ' '
+  EMPTY = '.'
   CURRENT = 'D'
   OXYGEN = 'O'
+  START = 'S'
 
   def initialize(program)
     @program = program
   end
 
-  attr_reader :program, :map, :position, :to_explore
+  attr_reader :program, :map, :position, :to_explore, :plan
 
   def run
     @panels = {}
@@ -31,26 +32,35 @@ class RepairDroid
     machine = Machine::Commandable.new(program)
     machine.start
 
+    @plan = nil
+
     while true do
       machine.running? or raise 'machine crashed'
 
       puts
       puts *draw
-      puts
-      puts to_explore.inspect
+      # puts
+      # puts to_explore.inspect
 
-      neighbours = position.neighbours
+      if plan.nil? or plan.empty?
+        where_to_test = nearest_to_explore
+        break if where_to_test.nil?
 
-      dir, desired_position = neighbours.entries.shuffle.first
+        @plan = find_path(from: position, to: where_to_test)
+        # puts "New plan! #{plan.inspect}"
+      end
 
+      raise if plan.nil? or plan.empty?
+
+      dir, desired_position = plan.shift
       machine.input(dir)
-
       answer = machine.output
 
       case answer
       when 0
         # wall
         fill_in(WALL, desired_position)
+        raise "Didn't expect a wall here!" unless plan.empty?
       when 1
         # moved
         fill_in(EMPTY, desired_position)
@@ -65,6 +75,8 @@ class RepairDroid
     end
 
     machine.stop
+
+    puts *draw
   end
 
   def add_unknown(pos)
@@ -85,6 +97,8 @@ class RepairDroid
           CURRENT
         elsif to_explore.include?(Position.new(x, y))
           EXPLORE
+        elsif [x, y] == [0, 0]
+          START
         else
           @panels[[x, y]] || UNKNOWN
         end
@@ -109,6 +123,51 @@ class RepairDroid
     end
   end
 
+  def nearest_to_explore
+    return nil if to_explore.empty?
+
+    to_explore.map do |target|
+      next if target == position
+      [target, position.distance_to(target)]
+    end.compact.sort_by(&:last).first.first
+  end
+
+  def find_path(from:, to:)
+    # puts "Fun bit! Find a path from #{from} to #{to}"
+
+    queue = [
+      {
+        must_not_visit: Set.new([from]),
+        path: [],
+        at: from,
+      }
+    ]
+
+    until queue.empty?
+      state = queue.shift
+      # p state
+      return state[:path] if state[:at] == to
+
+      state[:at].neighbours.each do |dir, move_to|
+        next if state[:must_not_visit].include?(move_to)
+
+        if move_to == to
+          next unless [EMPTY, OXYGEN, nil].include?(@panels[move_to])
+        else
+          next unless [EMPTY, OXYGEN].include?(@panels[move_to])
+        end
+
+        queue.unshift(
+          must_not_visit: state[:must_not_visit] + [move_to],
+          path: state[:path] + [[dir, move_to]],
+          at: move_to,
+        )
+      end
+    end
+
+    raise "Didn't find a path!"
+  end
+
   class Position < Array
     def initialize(x, y)
       super()
@@ -126,6 +185,10 @@ class RepairDroid
         3 => Position.new(x - 1, y),
         4 => Position.new(x + 1, y),
       }
+    end
+
+    def distance_to(other)
+      (self[0] - other[0]).abs + (self[1] - other[1]).abs
     end
   end
 
