@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'ore_reactions'
+
+reactions = IO.read('input/day14')
+puts OreReactions.new(reactions).maximum_amount_of(output: :FUEL, given_ore: 1000000000000)

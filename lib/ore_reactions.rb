@@ -66,6 +66,28 @@ class OreReactions
     @ore_consumed
   end
 
+  def maximum_amount_of(output:, given_ore:)
+    min = 0
+    max = given_ore
+
+    while min < max
+      midpoint = ((min + max) / 2.0).ceil
+      can_produce = ore_required_for(midpoint, output) <= given_ore
+      puts [ min, max, midpoint, can_produce ].inspect
+
+      if can_produce
+        return midpoint if midpoint == max
+        min = midpoint
+      else
+        return min if midpoint == max
+        max = midpoint
+      end
+    end
+
+    puts [ min, max ]
+    raise
+  end
+
   private
 
   attr_reader :reactions, :quantities, :ore_consumed
@@ -79,36 +101,36 @@ class OreReactions
 
   def consume(amount, of, depth: 0)
     indent = '  ' * depth
-    puts indent + "Consume #{amount} of #{of}"
+    # puts indent + "Consume #{amount} of #{of}"
 
     if of == 'ORE'
-      puts indent + "Consuming #{amount} ORE"
+      # puts indent + "Consuming #{amount} ORE"
       @ore_consumed += amount
       return
     end
 
     reaction = reactions[of] or raise 'No formula for making ' + of
 
-    puts indent + "Quantities = #{quantities.inspect}"
+    # puts indent + "Quantities = #{quantities.inspect}"
 
     if @quantities[of] < amount
       shortfall = amount - @quantities[of]
       reactions_needed = (1.0 * shortfall / reaction.output.amount).ceil
-      puts indent + "Running [#{reaction}] #{reactions_needed} times"
+      # puts indent + "Running [#{reaction}] #{reactions_needed} times"
 
       reaction.inputs.each do |input|
         consume(reactions_needed * input.amount, input.of, depth: depth + 1)
       end
 
       @quantities[of] += reactions_needed * reaction.output.amount
-      puts indent + "Quantities = #{quantities.inspect}"
+      # puts indent + "Quantities = #{quantities.inspect}"
     end
 
     raise "Still not enough!" if @quantities[of] < amount
     @quantities[of] -= amount
 
-    puts indent + "Consuming #{amount} #{of}"
-    puts indent + "Quantities = #{quantities.inspect}"
+    # puts indent + "Consuming #{amount} #{of}"
+    # puts indent + "Quantities = #{quantities.inspect}"
   end
 
 end
