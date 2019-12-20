@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'arcade_game'
+
+program = IO.read('input/day13').chomp.split(/,/).map(&:to_i)
+program[0] = 2
+
+game = ArcadeGame.new
+puts game.run_interactive(program)
