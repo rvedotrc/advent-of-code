@@ -1,0 +1,53 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'repair_droid'
+
+program = IO.read('input/day15').chomp.split(/,/).map(&:to_i)
+droid = RepairDroid.new(program)
+
+save_file = 'input/day15.explored'
+droid.load_map(IO.read(save_file))
+
+grid = droid.draw
+grid.each do |row|
+  row.gsub!(/D/, '.')
+  row.gsub!(/S/, '.')
+end
+
+steps = 0
+while true
+  puts "After #{steps} steps:"
+  puts *grid
+  puts
+
+  if grid.none? { |row| row.include?('.') }
+    break
+  end
+
+  tmp = grid.map(&:dup)
+
+  tmp.each do |row|
+    row.gsub!('O.', 'O~')
+    row.gsub!('.O', '~O')
+  end
+
+  tmp = tmp.map(&:chars).transpose.map { |chars| chars.join('') }
+
+  tmp.each do |row|
+    row.gsub!('O.', 'O~')
+    row.gsub!('.O', '~O')
+  end
+
+  tmp = tmp.map(&:chars).transpose.map { |chars| chars.join('') }
+
+  tmp.each do |row|
+    row.gsub!('~', 'O')
+  end
+
+  break if tmp == grid
+
+  grid = tmp
+  steps += 1
+  sleep 0.02
+end
