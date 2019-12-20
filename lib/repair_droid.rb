@@ -13,21 +13,24 @@ class RepairDroid
 
   def initialize(program)
     @program = program
-  end
-
-  attr_reader :program, :map, :position, :to_explore, :plan
-
-  def run
     @panels = {}
-    @position = Position.new(0, 0)
-    @panels[@position] = nil
+    @start = Position.new(0, 0)
+
+    # So we can draw the map
+    @panels[start] = nil
 
     # Places that we can definitely reach, to test what's there
     @to_explore = Set.new
-    add_unknown(position)
-    position.neighbours.values.each do |neighbour|
+    add_unknown(start)
+    start.neighbours.values.each do |neighbour|
       add_unknown(neighbour)
     end
+  end
+
+  attr_reader :program, :map, :position, :to_explore, :plan, :start
+
+  def run
+    @position = start
 
     machine = Machine::Commandable.new(program)
     machine.start
@@ -76,7 +79,52 @@ class RepairDroid
 
     machine.stop
 
+    puts '-' * 80
     puts *draw
+    puts
+  end
+
+  def load_map(text)
+    @panels = {}
+
+    text.lines.each_with_index do |row, y|
+      row.chars.each_with_index do |char, x|
+        pos = Position.new(x, y)
+        case char
+        when START
+          @start = pos
+          @panels[pos] = EMPTY
+        when CURRENT
+          @panels[pos] = EMPTY
+        when WALL, EMPTY, OXYGEN
+          @panels[pos] = char
+        end
+      end
+    end
+
+    @to_explore = Set.new
+
+    puts *draw
+  end
+
+  def find_oxygen
+    oxygen_positions = @panels.each_entry.map do |pos, what|
+      pos if what == OXYGEN
+    end.compact
+
+    p oxygen_positions
+
+    paths_to_oxygen = []
+    oxygen_positions.each do |oxygen_position|
+      paths_from(from: start, to: oxygen_position) do |path|
+        paths_to_oxygen << path
+      end
+    end
+
+    paths_to_oxygen.sort_by!(&:length)
+    paths_to_oxygen.each do |path|
+      puts "#{path.count} steps: #{path.map(&:first).join(' ')}"
+    end
   end
 
   def add_unknown(pos)
@@ -133,7 +181,23 @@ class RepairDroid
   end
 
   def find_path(from:, to:)
-    # puts "Fun bit! Find a path from #{from} to #{to}"
+    got = nil
+
+    begin
+      paths_from(from: from, to: to) do |path|
+        got = path
+        raise StopIteration
+      end
+    rescue StopIteration
+    end
+
+    got or raise "Didn't find a path!"
+
+    got
+  end
+
+  def paths_from(from:, to:)
+    # puts "Fun bit! Find all paths from #{from} to #{to}"
 
     queue = [
       {
@@ -146,7 +210,10 @@ class RepairDroid
     until queue.empty?
       state = queue.shift
       # p state
-      return state[:path] if state[:at] == to
+
+      if state[:at] == to
+        yield state[:path]
+      end
 
       state[:at].neighbours.each do |dir, move_to|
         next if state[:must_not_visit].include?(move_to)
@@ -164,8 +231,6 @@ class RepairDroid
         )
       end
     end
-
-    raise "Didn't find a path!"
   end
 
   class Position < Array

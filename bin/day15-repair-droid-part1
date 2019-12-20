@@ -4,4 +4,18 @@ $: << 'lib'
 require 'repair_droid'
 
 program = IO.read('input/day15').chomp.split(/,/).map(&:to_i)
-puts RepairDroid.new(program).run
+droid = RepairDroid.new(program)
+
+save_file = 'input/day15.explored'
+
+if File.exist?(save_file)
+  droid.load_map(IO.read(save_file))
+else
+  droid.run
+
+  File.open(save_file, 'w') do |f|
+    f.puts(*droid.draw)
+  end
+end
+
+droid.find_oxygen
