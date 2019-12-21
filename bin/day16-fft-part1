@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'fft_algorithm'
+
+input = IO.read('input/day16').chomp
+puts FFTAlgorithm.new(input).next(100)
+
