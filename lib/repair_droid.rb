@@ -16,14 +16,12 @@ class RepairDroid
     @panels = {}
     @start = Position.new(0, 0)
 
-    # So we can draw the map
-    @panels[start] = nil
-
     # Places that we can definitely reach, to test what's there
     @to_explore = Set.new
     add_unknown(start)
     start.neighbours.values.each do |neighbour|
       add_unknown(neighbour)
+      @panels[neighbour] = nil
     end
   end
 
@@ -37,13 +35,11 @@ class RepairDroid
 
     @plan = nil
 
+    @screen_origin = Position.new(-1, -1)
+    redraw
+
     while true do
       machine.running? or raise 'machine crashed'
-
-      puts
-      puts *draw
-      # puts
-      # puts to_explore.inspect
 
       if plan.nil? or plan.empty?
         where_to_test = nearest_to_explore
@@ -133,6 +129,7 @@ class RepairDroid
     end
 
     @to_explore << pos
+    draw_cell(pos)
   end
 
   def draw
@@ -141,15 +138,7 @@ class RepairDroid
 
     (y_values.min .. y_values.max).map do |y|
       (x_values.min .. x_values.max).map do |x|
-        if [x, y] == position
-          CURRENT
-        elsif to_explore.include?(Position.new(x, y))
-          EXPLORE
-        elsif [x, y] == [0, 0]
-          START
-        else
-          @panels[[x, y]] || UNKNOWN
-        end
+        what_to_render_at(x, y)
       end.join('')
     end
   end
@@ -164,11 +153,47 @@ class RepairDroid
     @to_explore.delete(at)
     @panels[at] = what
 
+    if at.x < @screen_origin.x or at.y < @screen_origin.y
+      @screen_origin = Position.new(
+        [@screen_origin.x, at.x].min,
+        [@screen_origin.y, at.y].min,
+      )
+      redraw
+    else
+      draw_cell(at)
+    end
+
     if what == OXYGEN or what == EMPTY
       at.neighbours.values.each do |neighbour|
-        @to_explore.add(neighbour) unless @panels[neighbour]
+        unless @panels[neighbour]
+          @to_explore.add(neighbour)
+          draw_cell(neighbour)
+        end
       end
     end
+  end
+
+  def redraw
+    print "\ec\e[2J"
+    puts *draw
+  end
+
+  def what_to_render_at(x, y)
+    if [x, y] == position
+      CURRENT
+    elsif to_explore.include?(Position.new(x, y))
+      EXPLORE
+    elsif [x, y] == [0, 0]
+      START
+    else
+      @panels[[x, y]] || UNKNOWN
+    end
+  end
+
+  def draw_cell(at)
+    @screen_origin or return
+    print "\e[#{at.y - @screen_origin.y + 1};#{at.x - @screen_origin.x + 1}H"
+    print what_to_render_at(*at)
   end
 
   def nearest_to_explore
@@ -239,6 +264,9 @@ class RepairDroid
       self << x
       self << y
     end
+
+    alias_method :x, :first
+    alias_method :y, :last
 
     def neighbours
       # north (1), south (2), west (3), and east (4)
