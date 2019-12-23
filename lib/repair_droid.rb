@@ -42,10 +42,9 @@ class RepairDroid
       machine.running? or raise 'machine crashed'
 
       if plan.nil? or plan.empty?
-        where_to_test = nearest_to_explore
-        break if where_to_test.nil?
+        @plan = nearest_to_explore
+        break if @plan.nil?
 
-        @plan = find_path(from: position, to: where_to_test)
         # puts "New plan! #{plan.inspect}"
       end
 
@@ -63,11 +62,17 @@ class RepairDroid
       when 1
         # moved
         fill_in(EMPTY, desired_position)
+        old_position = position
         @position = desired_position
+        draw_cell(old_position)
+        draw_cell(position)
       when 2
         # moved and found
         fill_in(OXYGEN, desired_position)
+        old_position = position
         @position = desired_position
+        draw_cell(old_position)
+        draw_cell(position)
       else
         raise "unexpected output #{answer}"
       end
@@ -75,9 +80,7 @@ class RepairDroid
 
     machine.stop
 
-    puts '-' * 80
-    puts *draw
-    puts
+    redraw
   end
 
   def load_map(text)
@@ -108,11 +111,9 @@ class RepairDroid
       pos if what == OXYGEN
     end.compact
 
-    p oxygen_positions
-
     paths_to_oxygen = []
-    oxygen_positions.each do |oxygen_position|
-      paths_from(from: start, to: oxygen_position) do |path|
+    breadth_first_paths_from(from: start) do |path|
+      if oxygen_positions.include?(path.last.last)
         paths_to_oxygen << path
       end
     end
@@ -199,31 +200,18 @@ class RepairDroid
   def nearest_to_explore
     return nil if to_explore.empty?
 
-    to_explore.map do |target|
-      next if target == position
-      [target, position.distance_to(target)]
-    end.compact.sort_by(&:last).first.first
-  end
-
-  def find_path(from:, to:)
-    got = nil
-
-    begin
-      paths_from(from: from, to: to) do |path|
-        got = path
-        raise StopIteration
+    breadth_first_paths_from(from: position) do |path|
+      # p path
+      ends_at = path.last.last
+      if to_explore.include?(ends_at)
+        return path
       end
-    rescue StopIteration
     end
 
-    got or raise "Didn't find a path!"
-
-    got
+    raise "Didn't find a path to any to_explore positions"
   end
 
-  def paths_from(from:, to:)
-    # puts "Fun bit! Find all paths from #{from} to #{to}"
-
+  def breadth_first_paths_from(from:)
     queue = [
       {
         must_not_visit: Set.new([from]),
@@ -234,26 +222,20 @@ class RepairDroid
 
     until queue.empty?
       state = queue.shift
-      # p state
 
-      if state[:at] == to
-        yield state[:path]
-      end
+      yield state[:path] unless state[:path].empty?
 
-      state[:at].neighbours.each do |dir, move_to|
-        next if state[:must_not_visit].include?(move_to)
-
-        if move_to == to
+      if @panels[state[:at]] or state[:at] == position
+        state[:at].neighbours.each do |dir, move_to|
+          next if state[:must_not_visit].include?(move_to)
           next unless [EMPTY, OXYGEN, nil].include?(@panels[move_to])
-        else
-          next unless [EMPTY, OXYGEN].include?(@panels[move_to])
-        end
 
-        queue.unshift(
-          must_not_visit: state[:must_not_visit] + [move_to],
-          path: state[:path] + [[dir, move_to]],
-          at: move_to,
-        )
+          queue.push(
+            must_not_visit: state[:must_not_visit] + [move_to],
+            path: state[:path] + [[dir, move_to]],
+            at: move_to,
+          )
+        end
       end
     end
   end
