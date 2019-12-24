@@ -73,7 +73,7 @@ class OreReactions
     while min < max
       midpoint = ((min + max) / 2.0).ceil
       can_produce = ore_required_for(midpoint, output) <= given_ore
-      puts [ min, max, midpoint, can_produce ].inspect
+      # puts [ min, max, midpoint, can_produce ].inspect
 
       if can_produce
         return midpoint if midpoint == max

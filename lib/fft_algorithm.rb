@@ -14,7 +14,6 @@ class FFTAlgorithm
         sum = input.zip(multipliers).map { |pair| pair.first * pair.last }.reduce(&:+)
         sum.abs % 10
       end
-      p input
     end
 
     input.join('')
