@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'scaffolding'
+
+program = IO.read('input/day17').chomp.split(/,/).map(&:to_i)
+s = Scaffolding.new(program)
+s.run
+puts s.intersections.map { |pair| pair[0] * pair[1] }.reduce(&:+)
