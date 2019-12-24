@@ -34,6 +34,7 @@ class RepairDroid
     machine.start
 
     @plan = nil
+    @previous_direction = 1
 
     @screen_origin = Position.new(-1, -1)
     redraw
@@ -42,7 +43,7 @@ class RepairDroid
       machine.running? or raise 'machine crashed'
 
       if plan.nil? or plan.empty?
-        @plan = nearest_to_explore
+        @plan = nearest_to_explore(previous_direction: @previous_direction)
         break if @plan.nil?
 
         # puts "New plan! #{plan.inspect}"
@@ -51,6 +52,7 @@ class RepairDroid
       raise if plan.nil? or plan.empty?
 
       dir, desired_position = plan.shift
+      @previous_direction = dir
       machine.input(dir)
       answer = machine.output
 
@@ -197,10 +199,12 @@ class RepairDroid
     print what_to_render_at(*at)
   end
 
-  def nearest_to_explore
+  def nearest_to_explore(previous_direction:)
     return nil if to_explore.empty?
 
-    breadth_first_paths_from(from: position) do |path|
+    preferred_directions = PREFERRED_DIRECTIONS[previous_direction]
+
+    breadth_first_paths_from(from: position, preferred_directions: preferred_directions) do |path|
       # p path
       ends_at = path.last.last
       if to_explore.include?(ends_at)
@@ -211,7 +215,9 @@ class RepairDroid
     raise "Didn't find a path to any to_explore positions"
   end
 
-  def breadth_first_paths_from(from:)
+  def breadth_first_paths_from(from:, preferred_directions: nil)
+    preferred_directions ||= PREFERRED_DIRECTIONS.values.first
+
     queue = [
       {
         must_not_visit: Set.new([from]),
@@ -226,7 +232,10 @@ class RepairDroid
       yield state[:path] unless state[:path].empty?
 
       if @panels[state[:at]] or state[:at] == position
-        state[:at].neighbours.each do |dir, move_to|
+        neighbours = state[:at].neighbours
+
+        preferred_directions.each do |dir|
+          next unless move_to = neighbours[dir]
           next if state[:must_not_visit].include?(move_to)
           next unless [EMPTY, OXYGEN, nil].include?(@panels[move_to])
 
@@ -266,5 +275,12 @@ class RepairDroid
       (self[0] - other[0]).abs + (self[1] - other[1]).abs
     end
   end
+
+  PREFERRED_DIRECTIONS = {
+    1 => [1, 4, 2, 3].freeze,
+    4 => [4, 2, 3, 1].freeze,
+    2 => [2, 3, 1, 4].freeze,
+    3 => [3, 1, 4, 2].freeze,
+  }.freeze
 
 end
