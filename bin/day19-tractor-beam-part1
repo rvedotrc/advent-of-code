@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'tractor_beam'
+
+program = IO.read('input/day19').chomp.split(/,/).map(&:to_i)
+beam = TractorBeam.new(program)
+puts beam.count_affected_spaces(50, 50)
