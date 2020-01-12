@@ -1,43 +1,99 @@
 require 'ostruct'
 require 'set'
+require 'weakref'
 
 class MazeToGraph
+
+  # Graph holds strong refs to its nodes and edges.
+  # Nodes and edges hold weak refs to the graph.
 
   def initialize(maze)
     maze = maze.gsub(/^\s+/, '')
 
     rows = maze.lines.map(&:chomp)
 
-    nodes = {}
+    @nodes_by_position = {}
+
+    @edges_by_node = Hash.new do |hash, key|
+      hash[key] = {}
+    end
 
     rows.each_with_index do |row, y|
-      row.chars.each_with_index do |cell, x|
-        case cell
+      row.chars.each_with_index do |what, x|
+        case what
         when '#'
         when '.', 'a'..'z', 'A'..'Z', '@'
-          nodes[[x, y]] = Node.new([x, y], type: cell)
+          add_node(position: [x, y], what: what)
         else
-          raise "Unexpected cell #{cell.inspect}"
+          raise "Unexpected cell #{what.inspect}"
         end
       end
     end
 
     # Find edges
-    nodes.values.each do |node|
-      [ [0, 1], [1, 0] ].each do |offsets|
+    nodes.each do |node|
+      [
+        [0, 1],
+        [1, 0],
+      ].each do |offsets|
         neighbour_position = node.position.zip(offsets).map {|t| t.reduce(&:+) }
-        neighbour = nodes[neighbour_position] or next
+        neighbour = @nodes_by_position[neighbour_position] or next
 
-        edge = Edge.new(node.position, neighbour.position)
-        node.edges << edge
-        neighbour.edges << edge
+        add_edge(from: node, to: neighbour, distance: 1)
       end
     end
-
-    @nodes = nodes.values
   end
 
-  attr_reader :nodes
+  def add_node(position:, what:)
+    raise if @nodes_by_position.key?(position)
+
+    @nodes_by_position[position] = Node.new(
+      graph: self,
+      position: position,
+      what: what,
+    )
+  end
+
+  def add_edge(from:, to:, distance:)
+    raise if from == to
+    raise if @edges_by_node[from][to]
+    raise if @edges_by_node[to][from]
+
+    edge = Edge.new(
+      graph: self,
+      nodes: Set.new([from, to]),
+      distance: distance,
+    )
+
+    @edges_by_node[from][to] = edge
+    @edges_by_node[to][from] = edge
+  end
+
+  def nodes
+    @nodes_by_position.values
+  end
+
+  def edges_from(from)
+    @edges_by_node[from].values
+  end
+
+  def each_edge_to(from:, &block)
+    @edges_by_node[from].each_entry do |to, edge|
+      block.call(edge, to)
+    end
+  end
+
+  def remove_node(node)
+    @nodes_by_position.delete(node.position)
+  end
+
+  def remove_edge(edge)
+    nodes = edge.nodes
+    @edges_by_node[nodes.first].delete(nodes.last)
+    @edges_by_node[nodes.last].delete(nodes.first)
+  end
+
+
 
   def puts_dot
     puts "graph g {"
@@ -46,11 +102,13 @@ class MazeToGraph
     node_name = lambda { |node| position_name.call(node.position) }
 
     nodes.each do |node|
-      puts "  #{node_name.call(node)} [label=\"#{node.type}\"]"
+      puts "  #{node_name.call(node)} [label=\"#{node.what}\"]"
     end
 
-    nodes.map(&:edges).reduce(&:+).uniq.each do |edge|
-      positions = edge.positions.map { |pos| position_name.call(pos) }.join(' -- ')
+    edges = @edges_by_node.values.flat_map(&:values).uniq
+
+    edges.each do |edge|
+      positions = edge.nodes.map { |node| node_name.call(node) }.join(' -- ')
       puts "  #{positions} [ label=\"distance: #{edge.distance}\"]"
     end
 
@@ -62,47 +120,82 @@ class MazeToGraph
       node_to_remove = nodes.find {|node| node.edges.count == 2}
       node_to_remove or break
 
-      old_edges = node_to_remove.edges
-      new_edge = Edge.new(
-        *old_edges.map(&:positions).reduce(&:+).delete(node_to_remove.position),
-        distance: old_edges.map(&:distance).reduce(&:+),
-      )
-
-      node_to_remove.edges_to.each do |edge_to|
-        to_node = nodes.find {|n| n.position == edge_to.to}
-        to_node.edges.delete(edge_to.edge)
-        to_node.edges << new_edge
+      distance = 0
+      neighbours = []
+      node_to_remove.each_edge_to do |edge, to|
+        distance += edge.distance
+        neighbours << to
+        remove_edge(edge)
       end
 
-      nodes.delete(node_to_remove)
+      remove_node(node_to_remove)
+
+      add_edge(
+        from: neighbours.first,
+        to: neighbours.last,
+        distance: distance,
+      )
     end
   end
 
   class Node
-    def initialize(position, type:)
+    include Comparable
+
+    def initialize(graph:, position:, what:)
+      @graph = WeakRef.new(graph)
       @position = position
-      @edges = []
-      @type = type
+      @what = what
+      @key = @position.join('-')
     end
 
-    attr_reader :position, :edges, :type
+    attr_reader :graph, :position, :what, :key
 
-    def edges_to
-      edges.map do |edge|
-        to = (edge.positions - [position]).first
+    def ==(other)
+      self.key == other.key
+    end
 
-        OpenStruct.new(edge: edge, to: to)
-      end
+    def hash
+      key.hash
+    end
+
+    def <=>(other)
+      key <=> other.key
+    end
+
+    def edges
+      graph.edges_from(self)
+    end
+
+    def each_edge_to(&block)
+      graph.each_edge_to(from: self, &block)
     end
   end
 
   class Edge
-    def initialize(from_position, to_position, distance: 1)
-      @positions = Set.new([from_position, to_position])
+    include Comparable
+
+    def initialize(graph:, nodes:, distance:)
+      nodes.count == 2 or raise
+
+      @graph = WeakRef.new(graph)
+      @nodes = nodes.sort
       @distance = distance
+      @key = @nodes.map(&:key).join(':')
     end
 
-    attr_reader :positions, :distance
+    attr_reader :graph, :nodes, :distance, :key
+
+    def ==(other)
+      self.key == other.key
+    end
+
+    def hash
+      key.hash
+    end
+
+    def <=>(other)
+      key <=> other.key
+    end
   end
 
 end
