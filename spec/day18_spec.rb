@@ -28,7 +28,7 @@ RSpec.describe MazeToGraph do
     MAZE
 
     graph = described_class.new(maze)
-    graph.reduce!
+    graph.reduce_intermediate_nodes!
     expect(graph.nodes.count).to eq(4)
     expect(graph.nodes.map { |node| node.edges.count }).to contain_exactly(1, 1, 3, 1)
   end
@@ -44,7 +44,7 @@ RSpec.describe MazeToGraph do
     MAZE
 
     graph = described_class.new(maze)
-    graph.reduce!
+    graph.reduce_intermediate_nodes!
 
     corner = graph.nodes.find {|node| node.position == [3, 4]}
     expect(corner.edges.map(&:distance)).to contain_exactly(3)
@@ -53,5 +53,22 @@ RSpec.describe MazeToGraph do
     expect(junction.edges.map(&:distance)).to contain_exactly(1, 1, 3)
   end
 
+  it 'removes dead ends' do
+    maze = <<-MAZE
+      #####
+      ##.##
+      #...#
+      ###.#
+      #a.b#
+      #####
+    MAZE
+
+    graph = described_class.new(maze)
+    graph.reduce_dead_ends!
+    graph.reduce_intermediate_nodes!
+
+    expect(graph.nodes.count).to eq(2)
+    expect(graph.edges.count).to eq(1)
+  end
 
 end

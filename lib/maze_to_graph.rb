@@ -73,6 +73,10 @@ class MazeToGraph
     @nodes_by_position.values
   end
 
+  def edges
+    @edges_by_node.values.flat_map(&:values).uniq
+  end
+
   def edges_from(from)
     @edges_by_node[from].values
   end
@@ -105,11 +109,9 @@ class MazeToGraph
       puts "  #{node_name.call(node)} [label=\"#{node.what}\"]"
     end
 
-    edges = @edges_by_node.values.flat_map(&:values).uniq
-
     edges.each do |edge|
       positions = edge.nodes.map { |node| node_name.call(node) }.join(' -- ')
-      puts "  #{positions} [ label=\"distance: #{edge.distance}\"]"
+      puts "  #{positions} [ label=\"#{edge.distance}\"]"
     end
 
     puts "}"
@@ -117,7 +119,35 @@ class MazeToGraph
 
   def reduce!
     while true
-      node_to_remove = nodes.find {|node| node.edges.count == 2}
+      break if !reduce_intermediate_nodes! && !reduce_dead_ends!
+    end
+  end
+
+  def reduce_dead_ends!
+    changed = false
+
+    while true
+      nodes_to_remove = nodes.select {|node| node.what == '.' and node.edges.count == 1}
+      break if nodes_to_remove.empty?
+
+      nodes_to_remove.each do |node|
+        node.each_edge_to do |edge, to|
+          remove_edge(edge)
+        end
+        remove_node(node)
+      end
+
+      changed = true
+    end
+
+    changed
+  end
+
+  def reduce_intermediate_nodes!
+    changed = false
+
+    while true
+      node_to_remove = nodes.find {|node| node.what == '.' and node.edges.count == 2}
       node_to_remove or break
 
       distance = 0
@@ -135,7 +165,11 @@ class MazeToGraph
         to: neighbours.last,
         distance: distance,
       )
+
+      changed = true
     end
+
+    changed
   end
 
   class Node
