@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'maze_to_graph'
+
+maze = MazeToGraph.new(IO.read('input/day18'))
+maze.reduce!
+maze.puts_dot

@@ -1,4 +1,5 @@
 require 'ostruct'
+require 'set'
 
 class MazeToGraph
 
@@ -13,8 +14,8 @@ class MazeToGraph
       row.chars.each_with_index do |cell, x|
         case cell
         when '#'
-        when '.'
-          nodes[[x, y]] = Node.new([x, y])
+        when '.', 'a'..'z', 'A'..'Z', '@'
+          nodes[[x, y]] = Node.new([x, y], type: cell)
         else
           raise "Unexpected cell #{cell.inspect}"
         end
@@ -38,6 +39,24 @@ class MazeToGraph
 
   attr_reader :nodes
 
+  def puts_dot
+    puts "graph g {"
+
+    position_name = lambda { |position| "n_#{position.first}_#{position.last}" }
+    node_name = lambda { |node| position_name.call(node.position) }
+
+    nodes.each do |node|
+      puts "  #{node_name.call(node)} [label=\"#{node.type}\"]"
+    end
+
+    nodes.map(&:edges).reduce(&:+).uniq.each do |edge|
+      positions = edge.positions.map { |pos| position_name.call(pos) }.join(' -- ')
+      puts "  #{positions} [ label=\"distance: #{edge.distance}\"]"
+    end
+
+    puts "}"
+  end
+
   def reduce!
     while true
       node_to_remove = nodes.find {|node| node.edges.count == 2}
@@ -60,12 +79,13 @@ class MazeToGraph
   end
 
   class Node
-    def initialize(position)
+    def initialize(position, type:)
       @position = position
       @edges = []
+      @type = type
     end
 
-    attr_reader :position, :edges
+    attr_reader :position, :edges, :type
 
     def edges_to
       edges.map do |edge|
