@@ -1,0 +1,207 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'scaffolding'
+
+program = IO.read('input/day17').chomp.split(/,/).map(&:to_i)
+# program[0] = 2
+s = Scaffolding.new(program)
+s.run
+
+initial_grid = s.grid.map { |row| row.join('') }
+
+start_position = begin
+  row = initial_grid.index { |cells| cells.include?("^") }
+  col = initial_grid[row].index("^")
+  [col, row]
+end
+
+@vectors = [
+  [0, -1],
+  [+1, 0],
+  [0, +1],
+  [-1, 0],
+]
+
+start_direction = 0
+
+def grid_with(grid, position, changed_to)
+  x, y = position
+
+  if grid[y][x] == changed_to
+    return grid
+  end
+
+  copy = grid.dup
+  copy[y] = copy[y].dup
+  copy[y][x] = changed_to
+  copy
+end
+
+queue = [
+  {
+    grid: grid_with(initial_grid, start_position, '/'),
+    position: start_position,
+    direction: 0,
+    main: '',
+    a: '',
+    b: '',
+    c: '',
+  },
+]
+
+def finished?(grid)
+  grid.none? { |row| row.include?("#") }
+end
+
+def has_room?(state, which)
+  state[which].length + 2 <= 20
+end
+
+def append(state, which, what)
+  new_def = if state[which].empty?
+    what
+  else
+    state[which] + ',' + what
+  end
+
+  return if new_def.length > 20
+
+  state.merge(which => new_def)
+end
+
+def run_subroutine(state, instructions)
+  instructions.split(',').each do |instruction|
+    state = run_instruction(state, instruction) or return
+  end
+
+  state
+end
+
+def run_instruction(state, instruction)
+  case instruction
+  when 'R'
+    state.merge(direction: (state[:direction] + 1) % 4)
+  when 'L'
+    state.merge(direction: (state[:direction] + 3) % 4)
+  when /^\d+$/
+    vector = @vectors[state[:direction]]
+    position = state[:position]
+
+    instruction.to_i.times do
+      # might return nil
+
+      position = position.zip(vector).map {|pair| pair.reduce(&:+)}
+      x, y = position
+
+      return if state[:grid][y].nil?
+
+      whats_there = state[:grid][y][x]
+      return if whats_there != '#' and whats_there != '/'
+
+      state = state.merge(
+        position: position,
+        grid: grid_with(state[:grid], position, '/'),
+      )
+    end
+
+    state
+  else
+    raise
+  end
+end
+
+until queue.empty?
+  state = queue.shift
+
+  if rand < 0.001
+    puts "@#{state[:position].inspect} D#{state[:direction]} main=#{state[:main]} A=#{state[:a]} B=#{state[:b]} C=#{state[:c]}"
+    puts *state[:grid]
+  end
+
+  if finished?(state[:grid])
+    p state
+    raise "finished!"
+    return
+  end
+
+  # Re-run an earlier subroutine?
+  [:a, :b, :c].each do |subroutine|
+    next if state[subroutine] == ''
+
+    new_state = append(state, :main, subroutine.to_s.upcase)
+    new_state or next
+
+    # puts "try append non-empty #{subroutine} to main"
+    new_state = run_subroutine(new_state, new_state[subroutine])
+    if new_state
+      queue.unshift(new_state)
+    end
+  end
+
+  main = state[:main]
+
+  # Append to the current-last subroutine?
+  if main != '' and main.count(main.chars.last) == 1
+    fn = main.chars.last.downcase.to_sym
+    current = state[fn]
+
+    # Append R
+    if !current.end_with?('L') and !current.end_with?('R')
+      new_state = run_instruction(state, 'R')
+      new_state = append(new_state, fn, 'R')
+
+      if new_state
+        # puts "append R to #{fn}"
+        queue.unshift(new_state)
+      end
+    end
+
+    # Append L
+    if !current.end_with?('R') and !current.end_with?('L')
+      new_state = run_instruction(state, 'L')
+      new_state = append(new_state, fn, 'L')
+
+      if new_state
+        # puts "append L to #{fn}"
+        queue.unshift(new_state)
+      end
+    end
+
+    # Append a step-forward
+    if !current.match(/[0-9]$/)
+      steps = 0
+      new_state = state
+
+      while true
+        steps += 2
+        new_state = run_instruction(new_state, '2')
+        new_state or break
+
+        tmp_state = append(new_state, fn, steps.to_s)
+        tmp_state or break
+
+        # puts "append #{steps} to #{fn}"
+        queue.unshift(tmp_state)
+      end
+    end
+  end
+
+  # Start a new subroutine?
+  if state[:main] == '' or state[ state[:main].chars.last.downcase.to_sym ].length >= 8
+
+    [:a, :b, :c].each do |subroutine|
+      state[subroutine].empty? or next
+
+      new_state = append(state, :main, subroutine.to_s.upcase)
+      new_state or break
+
+      # puts "append empty #{subroutine} to main"
+      queue.unshift(new_state)
+
+      break
+    end
+
+  end
+
+end

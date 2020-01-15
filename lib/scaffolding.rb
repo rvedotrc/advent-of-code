@@ -49,4 +49,20 @@ class Scaffolding
     intersections
   end
 
+  def walk(main:, a:, b:, c:)
+    copy_of_program = program.dup
+    copy_of_program[0] = 2
+
+    input = "#{main}\n#{a}\n#{b}\n#{c}\nn\n"
+    outputs = []
+
+    Machine::ArrayIO.new(
+      copy_of_program,
+      inputs: input.unpack("C*"),
+      outputs: outputs,
+    ).run
+
+    outputs
+  end
+
 end
