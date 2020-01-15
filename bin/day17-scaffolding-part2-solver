@@ -23,8 +23,6 @@ end
   [-1, 0],
 ]
 
-start_direction = 0
-
 def grid_with(grid, position, changed_to)
   x, y = position
 
@@ -122,7 +120,6 @@ until queue.empty?
   if finished?(state[:grid])
     p state
     raise "finished!"
-    return
   end
 
   # Re-run an earlier subroutine?
@@ -180,6 +177,9 @@ until queue.empty?
 
         tmp_state = append(new_state, fn, steps.to_s)
         tmp_state or break
+
+        # Assume no backtracking
+        break if tmp_state[:grid] == state[:grid]
 
         # puts "append #{steps} to #{fn}"
         queue.unshift(tmp_state)
