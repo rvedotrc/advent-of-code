@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'network'
+
+program = IO.read('input/day23').chomp.split(/,/).map(&:to_i)
+network = Network.new(program, 50)
+network.run
