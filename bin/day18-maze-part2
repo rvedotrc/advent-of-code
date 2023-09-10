@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'maze_to_graph'
+require 'maze_solver'
+
+maze = MazeToGraph.new(IO.read('input/day18'))
+maze.reduce!
+
+p MazeSolver.new(maze).shortest_paths
