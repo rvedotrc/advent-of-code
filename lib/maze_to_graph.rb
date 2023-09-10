@@ -4,7 +4,7 @@ require 'set'
 class MazeToGraph
 
   Node = Data.define(:position, :what)
-  Edge = Data.define(:node_a, :node_b, :distance)
+  Edge = Data.define(:position_a, :position_b, :distance)
   Neighbour = Data.define(:edge, :node)
 
   def initialize(maze)
@@ -15,9 +15,7 @@ class MazeToGraph
     @nodes_by_position = {}
     @current_node = nil
 
-    @edges_by_position = Hash.new do |hash, key|
-      hash[key] = []
-    end
+    @edges_by_position = {}
 
     rows.each_with_index do |row, y|
       row.chars.each_with_index do |what, x|
@@ -40,13 +38,15 @@ class MazeToGraph
         neighbour_position = node.position.split('_').map(&:to_i).zip(offsets).map {|t| t.reduce(&:+) }.join('_')
         neighbour = @nodes_by_position[neighbour_position] or next
 
-        add_edge(node_a: node, node_b: neighbour, distance: 1)
+        add_edge(position_a: node.position, position_b: neighbour.position, distance: 1)
       end
     end
+
+    check!
   end
 
   def add_node(position:, what:)
-    puts "add node #{position} #{what}"
+    # puts "#{object_id} add node #{position} #{what}"
     raise if @nodes_by_position.key?(position)
 
     new_node = Node.new(position: position, what: what)
@@ -56,44 +56,51 @@ class MazeToGraph
   end
 
   def remove_node(node)
-    puts "remove node #{node}"
+    # puts "#{object_id} remove node #{node}"
     @nodes_by_position.delete(node.position) or raise
     @current_node = nil if node.what == '@'
   end
 
-  def add_edge(node_a:, node_b:, distance:)
-    puts "add edge #{node_a} #{node_b} #{distance}"
-    return if node_a == node_b
+  def add_edge(position_a:, position_b:, distance:)
+    # puts "#{object_id} add edge #{position_a} #{position_b} #{distance}"
+    return if position_a == position_b
 
-    node_a, node_b = node_b, node_a if node_a.position > node_b.position
+    position_a, position_b = position_b, position_a if position_a > position_b
 
-    existing_edge = @edges_by_position[node_a.position].find { |e| e.node_b.position == node_b.position }
+    existing_edge = @edges_by_position[position_a]&.find { |e| e.position_b == position_b }
 
     if existing_edge
-      return if existing_edge.distance <= distance
+      if existing_edge.distance <= distance
+        # puts "#{object_id} existing edge #{existing_edge} is cheaper"
+        return
+      end
 
-      @edges_by_position[node_a.position].delete(existing_edge)
-      @edges_by_position[node_b.position].delete(existing_edge)
+      @edges_by_position[position_a].delete(existing_edge)
+      @edges_by_position[position_b].delete(existing_edge)
     end
 
-    edge = Edge.new(node_a:, node_b:, distance:)
-    @edges_by_position[node_a.position] << edge
-    @edges_by_position[node_b.position] << edge
+    edge = Edge.new(position_a:, position_b:, distance:)
+    (@edges_by_position[position_a] ||= []) << edge
+    (@edges_by_position[position_b] ||= []) << edge
+
+    raise @edges_by_position.inspect if @edges_by_position.values.any?(&:empty?)
   end
 
   def remove_edge(edge)
-    puts "remove edge #{edge}"
+    # puts "#{object_id} remove edge #{edge}"
 
-    [:node_a, :node_b].each do |ab|
-      position = edge.public_send(ab).position
-      edges = @edges_by_position[position]
+    [:position_a, :position_b].each do |ab|
+      position = edge.public_send(ab)
+      edges = (@edges_by_position[position] ||= [])
 
       index = edges.index(edge)
-      index >= 0 or raise "Edge #{edge} not found in index at #{edge.node_a.position}"
+      raise "Edge #{edge} not found in index at #{edge.position_a}" if index.nil?
 
       edges.delete_at(index)
       @edges_by_position.delete(position) if edges.empty?
     end
+
+    raise @edges_by_position.inspect if @edges_by_position.values.any?(&:empty?)
   end
 
   def nodes
@@ -109,14 +116,14 @@ class MazeToGraph
   def puts_dot
     puts "graph g {"
 
-    node_name = lambda { |node| "n_#{node.position}" }
+    position_name = lambda { |position| "p_#{position}" }
 
     nodes.each do |node|
-      puts "  #{node_name.call(node)} [label=\"#{node.what}\"]"
+      puts "  #{position_name.call(node.position)} [label=\"#{node.what}\"]"
     end
 
     edges.each do |edge|
-      positions = [edge.node_a, edge.node_b].map { |node| node_name.call(node) }.join(' -- ')
+      positions = [edge.position_a, edge.position_b].map(&position_name).join(' -- ')
       puts "  #{positions} [ label=\"#{edge.distance}\"]"
     end
 
@@ -127,6 +134,8 @@ class MazeToGraph
     while true
       break if !reduce_intermediate_nodes! && !reduce_dead_ends!
     end
+
+    check!
   end
 
   def reduce_dead_ends!
@@ -139,7 +148,7 @@ class MazeToGraph
 
       node_to_remove or break
 
-      puts "remove dead end #{node_to_remove}"
+      # puts "#{object_id} remove dead end #{node_to_remove}"
 
       # Should only be 1 neighbour
       neighbours_of(node_to_remove).each do |neighbour|
@@ -147,6 +156,8 @@ class MazeToGraph
       end
 
       remove_node(node_to_remove)
+
+      check!
 
       changed = true
     end
@@ -168,7 +179,7 @@ class MazeToGraph
 
       node_to_remove or break
 
-      puts "remove intermediate #{node_to_remove} with #{count_neighbours(node_to_remove)} neighbours"
+      # puts "#{object_id} remove intermediate #{node_to_remove} with #{count_neighbours(node_to_remove)} neighbours"
       neighbours = neighbours_of(node_to_remove).to_a
 
       # First remove the node and its edges
@@ -178,11 +189,13 @@ class MazeToGraph
       # Then add an edge between all combinations of neighbours
       neighbours.combination(2).each do |a, b|
         add_edge(
-          node_a: a.node,
-          node_b: b.node,
+          position_a: a.node.position,
+          position_b: b.node.position,
           distance: a.edge.distance + b.edge.distance,
         )
       end
+
+      check!
 
       changed = true
     end
@@ -191,24 +204,28 @@ class MazeToGraph
   end
 
   def count_neighbours(node)
-    @edges_by_position[node.position].count
+    @edges_by_position[node.position]&.count || 0
   end
 
   def neighbours_of(node)
     return enum_for(:neighbours_of, node) unless block_given?
 
-    # puts "neighbours of #{node}"
-    @edges_by_position[node.position].each do |edge|
-      other_node = (edge.node_a == node ? edge.node_b : edge.node_a)
+    # puts "#{object_id} neighbours of #{node}"
+    @edges_by_position[node.position]&.each do |edge|
+      other_position = (edge.position_a == node.position ? edge.position_b : edge.position_a)
+      other_node = @nodes_by_position[other_position]
       answer = Neighbour.new(edge:, node: other_node)
-      # puts "found #{answer}"
+      # puts "#{object_id} found #{answer}"
       yield answer
     end
   end
 
   def dump
+    puts "#{object_id} dump:"
+
     instance_variables.sort.each do |ivar|
       p ivar
+
       case ivar
       when :@nodes_by_position
         @nodes_by_position.each do |position, node|
@@ -225,6 +242,99 @@ class MazeToGraph
         puts "  #{@current_node}"
       end
     end
+  end
+
+  def hash
+    [
+      @nodes_by_position.hash,
+      @edges_by_position.transform_values do |edges|
+        edges.map(&:hash).sort
+      end.hash,
+      @current_node.hash,
+    ].hash
+  end
+
+  def check!
+    return
+    e = errors
+
+    if e.any?
+      puts "#{object_id} check! failure"
+      puts *e
+      dump
+      raise "Aborted"
+    end
+  end
+
+  def errors
+    return enum_for(:errors).to_a unless block_given?
+
+    @nodes_by_position.each do |position, node|
+      yield "nbp #{position} #{node}" if node.position != position
+    end
+
+    @edges_by_position.each do |position, edges|
+      yield "ebp #{position} is empty" if edges.empty?
+    end
+  end
+
+  def each_neighbouring_key
+    neighbours_of(current_node).select { |n| n.node.what.match?(/[a-z]/) }
+  end
+
+  def dup
+    parent = self
+    check!
+
+    copy = super.instance_eval do
+      # puts "dup #{parent.object_id} -> #{object_id}"
+      check!
+
+      @nodes_by_position = @nodes_by_position.dup
+      @edges_by_position = @edges_by_position.transform_values(&:dup)
+
+      check!
+      self
+    end
+  end
+
+  # Returns a new graph
+  def move_to(neighbouring_key)
+    raise unless neighbouring_key.node.what.match?(/[a-z]/)
+
+    dup.instance_eval do
+      old_current = current_node
+      new_current = neighbouring_key.node
+      door = nodes.find { |n| n.what == new_current.what.upcase }
+
+      # puts "#{object_id} before move #{old_current} -> #{new_current} (door=#{door}):"
+      # dump
+
+      check!
+
+      replace_node(old_current, '.')
+      check!
+      replace_node(new_current, '@')
+      check!
+      replace_node(door, '.') if door
+
+      check!
+
+      # puts "#{object_id} after move:"
+      # dump
+
+      reduce!
+      check!
+
+      self
+    end
+  end
+
+  private
+
+  def replace_node(node, what)
+    remove_node(node)
+    add_node(position: node.position, what:)
   end
 
 end

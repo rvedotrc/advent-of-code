@@ -84,10 +84,9 @@ RSpec.describe MazeToGraph do
     graph = described_class.new(maze)
     graph.reduce_intermediate_nodes!
 
-    graph.dump
-
     expect(graph.nodes.map(&:what)).to contain_exactly('a', 'b', 'A', 'B')
-    expect(graph.edges.map {|e| [e.node_a.what, e.node_b.what].sort})
+    n = graph.nodes.to_h { |n| [n.position, n] }
+    expect(graph.edges.map {|e| [n[e.position_a].what, n[e.position_b].what].sort})
       .to contain_exactly(
             ['A', 'B'],
             ['A', 'b'],
@@ -100,7 +99,7 @@ RSpec.describe MazeToGraph do
     def best_score(maze)
       graph = MazeToGraph.new(maze)
       solver = MazeSolver.new(graph)
-      solver.shortest_paths.first.length
+      solver.best_distance
     end
 
     it "solves example 1" do
