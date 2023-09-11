@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+
+$: << 'lib'
+require 'maze_to_graph'
+require 'maze_solver'
+
+$stdout.sync = true
+$stderr.sync = true
+
+maze = MazeToGraph.new(IO.read("input/day18")) do |rows|
+  at_row = rows.find_index { |row| row.include?("@") }
+  at_col = rows[at_row].index("@")
+
+  rows[at_row - 1][at_col-1..at_col+1] = "@#@"
+  rows[at_row][at_col-1..at_col+1] = "###"
+  rows[at_row + 1][at_col-1..at_col+1] = "@#@"
+end
+
+maze.reduce!
+maze.puts_dot
+
+p MazeSolver.new(maze).best_distance

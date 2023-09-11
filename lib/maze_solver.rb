@@ -28,8 +28,10 @@ class MazeSolver
         print "#{n0} #{n1}\r"
       end
 
+      # puts item.path.map(&:first).join + " " + item.cost.to_s
+
       unless item.path.empty?
-        state = item.path.map(&:first).sort.join + item.path.last.first
+        state = item.path.map(&:first).sort.join + item.graph.current_nodes.map(&:position).sort.join("/")
         # puts state
 
         if best_to[state] && best_to[state].cost < item.cost
@@ -71,7 +73,7 @@ class MazeSolver
             path: [*item.path, [neighbour.node.what, neighbour.edge.distance, neighbouring_keys.count]],
           )
 
-          queue.push(new_item)
+          queue.unshift(new_item)
         end
       end
     end

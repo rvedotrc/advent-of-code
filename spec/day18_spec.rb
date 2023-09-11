@@ -50,7 +50,7 @@ RSpec.describe MazeToGraph do
     node_c = graph.nodes.find {|node| node.what == 'c'}
     expect(graph.neighbours_of(node_c).map(&:edge).map(&:distance)).to contain_exactly(3)
 
-    expect(graph.neighbours_of(graph.current_node).map(&:edge).map(&:distance)).to contain_exactly(1, 1, 3)
+    expect(graph.neighbours_of(graph.current_nodes[0]).map(&:edge).map(&:distance)).to contain_exactly(1, 1, 3)
   end
 
   it 'removes dead ends' do
@@ -155,6 +155,64 @@ RSpec.describe MazeToGraph do
       MAZE
     end
 
+  end
+
+  describe "part 2" do
+    def best_score(maze)
+      graph = MazeToGraph.new(maze)
+      solver = MazeSolver.new(graph)
+      solver.best_distance
+    end
+
+    it "solves example 1" do
+      expect(best_score(<<~'MAZE')).to eq(8)
+        #######
+        #a.#Cd#
+        ##@#@##
+        #######
+        ##@#@##
+        #cB#Ab#
+        #######
+      MAZE
+    end
+
+    it "solves example 2" do
+      expect(best_score(<<~'MAZE')).to eq(24)
+        ###############
+        #d.ABC.#.....a#
+        ######@#@######
+        ###############
+        ######@#@######
+        #b.....#.....c#
+        ###############
+      MAZE
+    end
+
+    it "solves example 3" do
+      expect(best_score(<<~'MAZE')).to eq(32)
+        #############
+        #DcBa.#.GhKl#
+        #.###@#@#I###
+        #e#d#####j#k#
+        ###C#@#@###J#
+        #fEbA.#.FgHi#
+        #############
+      MAZE
+    end
+
+    it "solves example 4" do
+      expect(best_score(<<~'MAZE')).to eq(72)
+        #############
+        #g#f.D#..h#l#
+        #F###e#E###.#
+        #dCba@#@BcIJ#
+        #############
+        #nK.L@#@G...#
+        #M###N#H###.#
+        #o#m..#i#jk.#
+        #############
+      MAZE
+    end
   end
 
 end

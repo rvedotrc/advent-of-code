@@ -5,15 +5,16 @@ class MazeToGraph
 
   Node = Data.define(:position, :what)
   Edge = Data.define(:position_a, :position_b, :distance)
-  Neighbour = Data.define(:edge, :node)
+  Neighbour = Data.define(:from, :edge, :node)
 
   def initialize(maze)
     maze = maze.gsub(/^\s+/, '')
 
     rows = maze.lines.map(&:chomp)
+    yield rows if block_given?
 
     @nodes_by_position = {}
-    @current_node = nil
+    @current_nodes = []
 
     @edges_by_position = {}
 
@@ -52,13 +53,13 @@ class MazeToGraph
     new_node = Node.new(position: position, what: what)
 
     @nodes_by_position[position] = new_node
-    @current_node = new_node if what == '@'
+    @current_nodes << new_node if what == '@'
   end
 
   def remove_node(node)
     # puts "#{object_id} remove node #{node}"
     @nodes_by_position.delete(node.position) or raise
-    @current_node = nil if node.what == '@'
+    @current_nodes.delete(node) if node.what == '@'
   end
 
   def add_edge(position_a:, position_b:, distance:)
@@ -111,7 +112,7 @@ class MazeToGraph
     @edges_by_position.values.flatten(1).uniq
   end
 
-  attr_reader :current_node
+  attr_reader :current_nodes
 
   def puts_dot
     puts "graph g {"
@@ -214,7 +215,7 @@ class MazeToGraph
     @edges_by_position[node.position]&.each do |edge|
       other_position = (edge.position_a == node.position ? edge.position_b : edge.position_a)
       other_node = @nodes_by_position[other_position]
-      answer = Neighbour.new(edge:, node: other_node)
+      answer = Neighbour.new(from: node, edge:, node: other_node)
       # puts "#{object_id} found #{answer}"
       yield answer
     end
@@ -238,8 +239,10 @@ class MazeToGraph
             puts "    #{edge}"
           end
         end
-      when :@current_node
-        puts "  #{@current_node}"
+      when :@current_nodes
+        @current_nodes.each do |c|
+          puts "  #{c}"
+        end
       end
     end
   end
@@ -250,7 +253,7 @@ class MazeToGraph
       @edges_by_position.transform_values do |edges|
         edges.map(&:hash).sort
       end.hash,
-      @current_node.hash,
+      @current_nodes.sort_by(&:position).hash,
     ].hash
   end
 
@@ -279,7 +282,9 @@ class MazeToGraph
   end
 
   def each_neighbouring_key
-    neighbours_of(current_node).select { |n| n.node.what.match?(/[a-z]/) }
+    current_nodes.flat_map do |curr|
+      neighbours_of(curr).select { |n| n.node.what.match?(/[a-z]/) }
+    end
   end
 
   def dup
@@ -290,6 +295,7 @@ class MazeToGraph
       # puts "dup #{parent.object_id} -> #{object_id}"
       check!
 
+      @current_nodes = @current_nodes.dup
       @nodes_by_position = @nodes_by_position.dup
       @edges_by_position = @edges_by_position.transform_values(&:dup)
 
@@ -300,10 +306,11 @@ class MazeToGraph
 
   # Returns a new graph
   def move_to(neighbouring_key)
+    raise unless current_nodes.include?(neighbouring_key.from)
     raise unless neighbouring_key.node.what.match?(/[a-z]/)
 
     dup.instance_eval do
-      old_current = current_node
+      old_current = neighbouring_key.from
       new_current = neighbouring_key.node
       door = nodes.find { |n| n.what == new_current.what.upcase }
 
