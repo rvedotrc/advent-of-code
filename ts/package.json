@@ -21,5 +21,8 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx --max-warnings=0 src",
     "prettier": "prettier --write src"
   },
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "dependencies": {
+    "immutable": "^5.0.0-beta.4"
+  }
 }

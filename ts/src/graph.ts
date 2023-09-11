@@ -1,177 +1,72 @@
+import { Edges } from "./edges";
+import { Nodes } from "./nodes";
+
 export type Position = string;
 export type What = string;
 export type Cost = number;
 
-// export type GNode = {
-//     readonly position: Position;
-//     readonly what: What;
-// };
-
-const SPACE = ".";
-
 export class Graph {
-  private nodesByPosition: Map<Position, What> = new Map<Position, What>();
-  private edgeCostsByStartAndEndPosition: Map<Position, Map<Position, Cost>> =
-    new Map();
-  private nodePositionsByWhat: Map<What, Set<Position>> = new Map();
+  public readonly nodes: Nodes;
+  public readonly edges: Edges;
 
-  constructor() {}
-
-  public addNode(position: Position, what: What): void {
-    if (this.nodesByPosition.has(position)) throw "Already got a node here";
-
-    this.nodesByPosition.set(position, what);
-
-    const s = this.nodePositionsByWhat.get(what);
-    if (s) {
-      if (s.has(position)) throw "Already got this position";
-      s.add(position);
-    } else {
-      this.nodePositionsByWhat.set(what, new Set(position));
-    }
+  public static empty(): Graph {
+    return new Graph(Nodes.empty(), Edges.empty());
   }
 
-  public removeNode(position: Position): void {
-    const existingWhat = this.nodesByPosition.get(position);
-    if (existingWhat === undefined) throw "Haven't got a node here";
-
-    if (this.edgeCostsByStartAndEndPosition.has(position))
-      throw "Still got edges here";
-
-    this.nodesByPosition.delete(position);
-
-    const byWhat = this.nodePositionsByWhat.get(existingWhat);
-    if (!byWhat) throw "Wasn't in index";
-
-    byWhat.delete(position);
-    if (byWhat.size === 0) this.nodePositionsByWhat.delete(existingWhat);
+  private constructor(nodes: Nodes, edges: Edges) {
+    this.nodes = nodes;
+    this.edges = edges;
   }
 
-  public addEdge(from: Position, to: Position, cost: Cost): void {
-    if (!this.nodesByPosition.has(from)) throw "No node here";
-    if (!this.nodesByPosition.has(to)) throw "No node here";
-    if (from === to) throw "Can't do from==to";
+  public toString(): string {
+    return `<graph with ${this.nodes.size} nodes and ${this.edges.size} edges>`;
+  }
 
-    {
-      const existing = this.edgeCostsByStartAndEndPosition.get(from);
-      if (existing) {
-        if (existing.has(to)) throw "Already got an edge here";
-        existing.set(to, cost);
-      } else {
-        this.edgeCostsByStartAndEndPosition.set(from, new Map().set(to, cost));
-      }
-    }
-
-    [from, to] = [to, from];
-
-    {
-      const existing = this.edgeCostsByStartAndEndPosition.get(from);
-      if (existing) {
-        if (existing.has(to)) throw "Already got an edge here";
-        existing.set(to, cost);
-      } else {
-        this.edgeCostsByStartAndEndPosition.set(from, new Map().set(to, cost));
-      }
-    }
+  public [Symbol.toStringTag](): string {
+    return this.toString();
   }
 
   public dump(): void {
-    const e = [...this.edgeCostsByStartAndEndPosition.values()]
-      .map((s) => s.size)
-      .reduce((prev, curr) => prev + curr, 0);
-    console.log(`${this.nodesByPosition.size} nodes, ${e} edges`);
+    console.log(this.toString());
   }
 
-  public reduceTwoEdgeSpaceNodes(): void {
-    while (true) {
-      const spacePositions = this.nodePositionsByWhat.get(SPACE);
-      if (!spacePositions) break;
-
-      const twoEdgeSpacePositions = [...spacePositions].filter(
-        (pos) => this.edgeCostsByStartAndEndPosition.get(pos)?.size === 2,
-      );
-      if (twoEdgeSpacePositions.length === 0) break;
-
-      for (const positionToRemove of twoEdgeSpacePositions) {
-        const e = this.edgeCostsByStartAndEndPosition.get(positionToRemove);
-        if (e === undefined) continue;
-
-        const neighbourPositions = [...e.entries()];
-        if (neighbourPositions.length !== 2) continue;
-
-        const [[leftPosition, leftCost], [rightPosition, rightCost]] =
-          neighbourPositions;
-        const newCost = leftCost + rightCost;
-
-        this.edgeCostsByStartAndEndPosition.delete(positionToRemove);
-        this.edgeCostsByStartAndEndPosition
-          .get(leftPosition)
-          ?.delete(positionToRemove);
-        this.edgeCostsByStartAndEndPosition
-          .get(rightPosition)
-          ?.delete(positionToRemove);
-
-        this.nodesByPosition.delete(positionToRemove);
-        this.nodePositionsByWhat.get(SPACE)?.delete(positionToRemove);
-
-        const existingLeft =
-          this.edgeCostsByStartAndEndPosition.get(leftPosition);
-        const existingRight =
-          this.edgeCostsByStartAndEndPosition.get(rightPosition);
-        if (!existingLeft) throw "?";
-        if (!existingRight) throw "?";
-
-        const existingCost = existingLeft.get(rightPosition);
-        if (existingCost === undefined || newCost < existingCost) {
-          existingLeft.set(rightPosition, newCost);
-          existingRight.set(leftPosition, newCost);
-        }
-      }
-    }
+  public addNode(position: Position, what: What): Graph {
+    return new Graph(this.nodes.add(position, what), this.edges);
   }
 
-  public reduceDeadEnds(): void {
-    while (true) {
-      const spacePositions = this.nodePositionsByWhat.get(SPACE);
-      if (!spacePositions) break;
+  public removeNode(position: Position): Graph {
+    if (this.edges.getByPosition(position).size > 0) throw "";
 
-      const oneEdgeSpacePositions = [...spacePositions].filter(
-        (pos) => this.edgeCostsByStartAndEndPosition.get(pos)?.size === 1,
-      );
-      if (oneEdgeSpacePositions.length === 0) break;
+    return new Graph(this.nodes.remove(position), this.edges);
+  }
 
-      for (let positionToRemove of oneEdgeSpacePositions) {
-        while (true) {
-          const m = this.edgeCostsByStartAndEndPosition.get(positionToRemove);
-          if (!m) throw "?146";
+  public addEdge(
+    fromPosition: Position,
+    toPosition: Position,
+    cost: Cost,
+  ): Graph {
+    if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
-          const neighbours = [...m.keys()];
-          if (neighbours.length !== 1) break;
+    return new Graph(
+      this.nodes,
+      this.edges.add(fromPosition, toPosition, cost),
+    );
+  }
 
-          const neighbourPosition = neighbours[0];
-          const neighbourWhat = this.nodesByPosition.get(neighbourPosition);
-          if (!neighbourWhat) throw "?153";
+  public addEdgeIfBetter(
+    fromPosition: Position,
+    toPosition: Position,
+    cost: Cost,
+  ): Graph {
+    if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
-          this.edgeCostsByStartAndEndPosition.delete(positionToRemove);
-          const n = this.edgeCostsByStartAndEndPosition.get(neighbourPosition);
-          if (!n) throw "?157";
+    return new Graph(
+      this.nodes,
+      this.edges.addIfBetter(fromPosition, toPosition, cost),
+    );
+  }
 
-          n.delete(positionToRemove);
-          if (n.size === 0) {
-            this.edgeCostsByStartAndEndPosition.delete(neighbourPosition);
-          }
-
-          this.nodesByPosition.delete(positionToRemove);
-          this.nodePositionsByWhat.get(SPACE)?.delete(positionToRemove);
-
-          if (neighbourWhat !== SPACE) break;
-
-          positionToRemove = neighbourPosition;
-        }
-      }
-    }
-
-    if (this.nodePositionsByWhat.get(SPACE)?.size === 0)
-      this.nodePositionsByWhat.delete(SPACE);
+  public removeEdge(from: Position, to: Position): Graph {
+    return new Graph(this.nodes, this.edges.remove(from, to));
   }
 }

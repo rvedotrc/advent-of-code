@@ -1,21 +1,14 @@
 import * as fs from "fs";
 
+import { graphToDot } from "./dot";
 import { graphBuilder } from "./graphBuilder";
-
-// const CURRENT = "@";
-// const isKey = (s: string) => s >= "a" && s <= "z";
-// const isDoor = (s: string) => s >= "A" && s <= "Z";
-
-// type Edge = {
-//   readonly start: Position;
-//   readonly end: Position;
-//   readonly cost: number;
-// };
+import { reduceSpaces } from "./reduceSpaces";
 
 const text: string = fs.readFileSync("../input/day18").toString();
-const g = graphBuilder(text);
+let g = graphBuilder(text);
 g.dump();
-g.reduceDeadEnds();
+g = reduceSpaces(g);
 g.dump();
-g.reduceTwoEdgeSpaceNodes();
-g.dump();
+
+fs.writeFileSync("t.dot", graphToDot(g));
+console.log("wrote t.dot");

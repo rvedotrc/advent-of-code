@@ -1,9 +1,8 @@
-import { Graph, Position } from "./graph";
-
-const WALL = "#";
+import { WALL } from "./cells";
+import { Graph as Graph, Position } from "./graph";
 
 export const graphBuilder = (text: string): Graph => {
-  const g = new Graph();
+  let g = Graph.empty();
 
   const xyToPos = (x: number, y: number): Position => `(${x},${y})`;
 
@@ -19,11 +18,12 @@ export const graphBuilder = (text: string): Graph => {
     row.split("").forEach((cell, x) => {
       if (cell === WALL) return;
       const pos = xyToPos(x, y);
-      g.addNode(pos, cell);
+      g = g.addNode(pos, cell);
 
-      if (x > 0 && row[x - 1] !== WALL) g.addEdge(pos, xyToPos(x - 1, y), 1);
+      if (x > 0 && row[x - 1] !== WALL)
+        g = g.addEdge(pos, xyToPos(x - 1, y), 1);
       if (y > 0 && rows[y - 1][x] !== WALL)
-        g.addEdge(pos, xyToPos(x, y - 1), 1);
+        g = g.addEdge(pos, xyToPos(x, y - 1), 1);
     });
   });
 
