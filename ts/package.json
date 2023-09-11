@@ -1,0 +1,25 @@
+{
+  "author": "Rachel Evans <rachel@rachelevans.org>",
+  "description": "AOC 2019",
+  "devDependencies": {
+    "@types/node": "^20.5.9",
+    "@typescript-eslint/eslint-plugin": "^6.5.0",
+    "@typescript-eslint/parser": "^6.5.0",
+    "eslint": "^8.49.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "license": "MIT",
+  "main": "index.js",
+  "name": "aoc-2019",
+  "private": true,
+  "repository": "https://github.com/rvedotrc/advent-of-code-2019",
+  "scripts": {
+    "build": "yarn prettier && yarn lint --fix && yarn compile",
+    "compile": "tsc -p tsconfig.json",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx --max-warnings=0 src",
+    "prettier": "prettier --write src"
+  },
+  "version": "1.0.0"
+}
