@@ -129,4 +129,49 @@ export class Graph {
       }
     }
   }
+
+  public reduceDeadEnds(): void {
+    while (true) {
+      const spacePositions = this.nodePositionsByWhat.get(SPACE);
+      if (!spacePositions) break;
+
+      const oneEdgeSpacePositions = [...spacePositions].filter(
+        (pos) => this.edgeCostsByStartAndEndPosition.get(pos)?.size === 1,
+      );
+      if (oneEdgeSpacePositions.length === 0) break;
+
+      for (let positionToRemove of oneEdgeSpacePositions) {
+        while (true) {
+          const m = this.edgeCostsByStartAndEndPosition.get(positionToRemove);
+          if (!m) throw "?146";
+
+          const neighbours = [...m.keys()];
+          if (neighbours.length !== 1) break;
+
+          const neighbourPosition = neighbours[0];
+          const neighbourWhat = this.nodesByPosition.get(neighbourPosition);
+          if (!neighbourWhat) throw "?153";
+
+          this.edgeCostsByStartAndEndPosition.delete(positionToRemove);
+          const n = this.edgeCostsByStartAndEndPosition.get(neighbourPosition);
+          if (!n) throw "?157";
+
+          n.delete(positionToRemove);
+          if (n.size === 0) {
+            this.edgeCostsByStartAndEndPosition.delete(neighbourPosition);
+          }
+
+          this.nodesByPosition.delete(positionToRemove);
+          this.nodePositionsByWhat.get(SPACE)?.delete(positionToRemove);
+
+          if (neighbourWhat !== SPACE) break;
+
+          positionToRemove = neighbourPosition;
+        }
+      }
+    }
+
+    if (this.nodePositionsByWhat.get(SPACE)?.size === 0)
+      this.nodePositionsByWhat.delete(SPACE);
+  }
 }

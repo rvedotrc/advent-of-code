@@ -15,5 +15,7 @@ import { graphBuilder } from "./graphBuilder";
 const text: string = fs.readFileSync("../input/day18").toString();
 const g = graphBuilder(text);
 g.dump();
+g.reduceDeadEnds();
+g.dump();
 g.reduceTwoEdgeSpaceNodes();
 g.dump();
