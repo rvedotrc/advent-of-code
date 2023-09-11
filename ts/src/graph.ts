@@ -7,6 +7,8 @@ export type Cost = number;
 //     readonly what: What;
 // };
 
+const SPACE = ".";
+
 export class Graph {
   private nodesByPosition: Map<Position, What> = new Map<Position, What>();
   private edgeCostsByStartAndEndPosition: Map<Position, Map<Position, Cost>> =
@@ -78,5 +80,53 @@ export class Graph {
       .map((s) => s.size)
       .reduce((prev, curr) => prev + curr, 0);
     console.log(`${this.nodesByPosition.size} nodes, ${e} edges`);
+  }
+
+  public reduceTwoEdgeSpaceNodes(): void {
+    while (true) {
+      const spacePositions = this.nodePositionsByWhat.get(SPACE);
+      if (!spacePositions) break;
+
+      const twoEdgeSpacePositions = [...spacePositions].filter(
+        (pos) => this.edgeCostsByStartAndEndPosition.get(pos)?.size === 2,
+      );
+      if (twoEdgeSpacePositions.length === 0) break;
+
+      for (const positionToRemove of twoEdgeSpacePositions) {
+        const e = this.edgeCostsByStartAndEndPosition.get(positionToRemove);
+        if (e === undefined) continue;
+
+        const neighbourPositions = [...e.entries()];
+        if (neighbourPositions.length !== 2) continue;
+
+        const [[leftPosition, leftCost], [rightPosition, rightCost]] =
+          neighbourPositions;
+        const newCost = leftCost + rightCost;
+
+        this.edgeCostsByStartAndEndPosition.delete(positionToRemove);
+        this.edgeCostsByStartAndEndPosition
+          .get(leftPosition)
+          ?.delete(positionToRemove);
+        this.edgeCostsByStartAndEndPosition
+          .get(rightPosition)
+          ?.delete(positionToRemove);
+
+        this.nodesByPosition.delete(positionToRemove);
+        this.nodePositionsByWhat.get(SPACE)?.delete(positionToRemove);
+
+        const existingLeft =
+          this.edgeCostsByStartAndEndPosition.get(leftPosition);
+        const existingRight =
+          this.edgeCostsByStartAndEndPosition.get(rightPosition);
+        if (!existingLeft) throw "?";
+        if (!existingRight) throw "?";
+
+        const existingCost = existingLeft.get(rightPosition);
+        if (existingCost === undefined || newCost < existingCost) {
+          existingLeft.set(rightPosition, newCost);
+          existingRight.set(leftPosition, newCost);
+        }
+      }
+    }
   }
 }

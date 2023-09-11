@@ -3,7 +3,6 @@ import * as fs from "fs";
 import { graphBuilder } from "./graphBuilder";
 
 // const CURRENT = "@";
-// const SPACE = ".";
 // const isKey = (s: string) => s >= "a" && s <= "z";
 // const isDoor = (s: string) => s >= "A" && s <= "Z";
 
@@ -15,4 +14,6 @@ import { graphBuilder } from "./graphBuilder";
 
 const text: string = fs.readFileSync("../input/day18").toString();
 const g = graphBuilder(text);
+g.dump();
+g.reduceTwoEdgeSpaceNodes();
 g.dump();
