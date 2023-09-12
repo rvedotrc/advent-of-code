@@ -1,134 +1,180 @@
 import * as Immutable from "immutable";
 
-import { CURRENT, isKey, SPACE } from "./cells";
+import { CURRENT, doorFor, isDoor, isKey, keyFor, SPACE } from "./cells";
 import { Cost, Graph, Position } from "./graph";
 import { reduceSpaces } from "./reduceSpaces";
 
-type Item = {
-  graph: Graph;
-  cost: Cost;
-  keysHeld: Immutable.Set<string>;
-  keyOrder: string;
-};
+const SOLVED = "SOLVED";
 
-const currentPositions = (g: Graph): Immutable.Set<Position> =>
-  Immutable.Set(g.nodes.byWhat.get(CURRENT) || Immutable.Set());
+const getCurrentPositions = (g: Graph): Immutable.Set<Position> =>
+  g.nodes.byWhat.get(CURRENT) || Immutable.Set();
 
-const unlockDoors = (g: Graph, door: string): Graph => {
-  for (const doorPosition of g.nodes.byWhat.get(door) || Immutable.Set()) {
-    g = g.changeNode(doorPosition, SPACE);
-  }
-
-  return g;
-};
-
-const move = (g: Graph, from: Position, to: Position): Graph =>
-  g.changeNode(from, SPACE).changeNode(to, CURRENT);
-
-const solveForQueue = (queue: Item[], numberOfKeys: number): number => {
-  // const bestByPosition: Map<Position, number> = new Map();
-  // for (const pos of g.nodes.byPosition.keys()) {
-  //     bestByPosition.set(pos, Infinity);
-  // }
-  //
-  // for (const pos of (g.nodes.byWhat.get(CURRENT) || Immutable.Set())) {
-  //     bestByPosition.set(pos, 0);
-  // }
-
-  const bestByState: Map<
-    {
-      keysHeld: Immutable.Set<string>;
-      currentPositions: Immutable.Set<Position>;
-    },
-    number
-  > = new Map();
-
-  let bestScore = Infinity;
-
-  while (true) {
-    const item = queue.shift();
-    if (!item) break;
-
-    // console.log({
-    //   graph: item.graph.toString(),
-    //   cost: item.cost,
-    //   keyOrder: item.keyOrder,
-    // });
-
-    if (item.keysHeld.size === numberOfKeys) {
-      if (item.cost < bestScore) {
-        console.log({ solution: { keyOrder: item.keyOrder, cost: item.cost } });
-        bestScore = item.cost;
-      }
-
-      continue;
-    }
-
-    if (item.cost >= bestScore) continue;
-
-    const currents = currentPositions(item.graph);
-
-    const state = {
-      keysHeld: item.keysHeld,
-      currentPositions: currents,
+type State =
+  | typeof SOLVED
+  | {
+      heldKeys: Immutable.Set<string>;
+      currentPositions: Immutable.Set<number>;
     };
 
-    const previousBest = bestByState.get(state);
-    // console.log({ state, previousBest, cost: item.cost });
-    if (previousBest && previousBest <= item.cost) {
-      // process.stderr.write(".");
-      console.log("skip");
-      continue;
-    }
+const stateToString = (state: State) =>
+  state === SOLVED
+    ? SOLVED
+    : `${[...state.heldKeys].sort().join("")}/${[...state.currentPositions]
+        .sort((a, b) => a - b)
+        .map(String)
+        .join(",")}`;
 
-    bestByState.set(state, item.cost);
+const stringToState = (s: string): State => {
+  if (s === SOLVED) return SOLVED;
 
-    const neighbouringKeys = [...currents]
-      .flatMap((from) => {
-        const r = item.graph.edges.getByPosition(from);
-        return [...r.entries()].map(([to, cost]) => ({
-          from,
-          to,
-          cost,
-          key: item.graph.nodes.byPosition.get(to) || "",
-        }));
-      })
-      .filter((ftck) => isKey(ftck.key));
+  const [keys, positions] = s.split("/");
 
-    neighbouringKeys.sort(
-      (a, b) => b.cost - a.cost || b.from - a.from || b.to - a.to,
-    );
+  return {
+    heldKeys: Immutable.Set(keys.split("")),
+    currentPositions: Immutable.Set(positions.split(",").map(Number)),
+  };
+};
 
-    const newItems = neighbouringKeys.map((k) => ({
-      graph: reduceSpaces(
-        move(unlockDoors(item.graph, k.key.toUpperCase()), k.from, k.to),
-      ),
-      cost: item.cost + k.cost,
-      keysHeld: item.keysHeld.add(k.key),
-      keyOrder: item.keyOrder + k.key,
-    }));
+const unlockDoors = (
+  g: Graph,
+  keysHeld: Immutable.Set<string>,
+  currentPositions: Immutable.Set<Position>,
+) => {
+  const toRemove = keysHeld.flatMap((k) => [k, doorFor(k)]);
 
-    // const first = newItems.shift();
-    // if (first) queue.unshift(first);
-    // queue.push(...newItems);
+  const positionsToRemove = toRemove.flatMap(
+    (kd): Immutable.Set<Position> => g.nodes.byWhat.get(kd) || Immutable.Set(),
+  );
 
-    queue.unshift(...newItems);
+  for (const pos of positionsToRemove) {
+    if (!currentPositions.has(pos)) g = g.changeNode(pos, SPACE);
   }
 
-  return bestScore;
+  return reduceSpaces(g);
+};
+
+const unvisitedNeighbours = (
+  g: Graph,
+  numberOfKeys: number,
+  currentState: State,
+  visited: Set<string>,
+): { neighbourState: State; costFromHere: Cost }[] => {
+  if (currentState === SOLVED) return [];
+
+  g = unlockDoors(g, currentState.heldKeys, currentState.currentPositions);
+
+  const out: ReturnType<typeof unvisitedNeighbours> = [];
+
+  for (const fromPosition of currentState.currentPositions) {
+    const edges = g.edges.getByPosition(fromPosition);
+    if (!edges) throw "";
+
+    for (const [toPosition, costFromHere] of edges.entries()) {
+      const what = g.nodes.byPosition.get(toPosition);
+      if (what === undefined) throw "";
+
+      if (isDoor(what) && !currentState.heldKeys.has(keyFor(what))) continue;
+
+      if (isKey(what)) {
+        const newKeysHeld = currentState.heldKeys.add(what);
+
+        if (newKeysHeld.size === numberOfKeys) {
+          out.push({ neighbourState: SOLVED, costFromHere });
+        } else {
+          out.push({
+            neighbourState: {
+              heldKeys: newKeysHeld,
+              currentPositions: currentState.currentPositions
+                .delete(fromPosition)
+                .add(toPosition),
+            },
+            costFromHere,
+          });
+        }
+      } else {
+        out.push({
+          neighbourState: {
+            ...currentState,
+            currentPositions: currentState.currentPositions
+              .delete(fromPosition)
+              .add(toPosition),
+          },
+          costFromHere,
+        });
+      }
+    }
+  }
+
+  const r = out.filter(
+    (ans) => !visited.has(stateToString(ans.neighbourState)),
+  );
+
+  return r;
 };
 
 export const solve = (g: Graph): number => {
+  let currentState: State = {
+    heldKeys: Immutable.Set(),
+    currentPositions: getCurrentPositions(g),
+  } as State;
+  let currentScore = 0;
+
   const numberOfKeys = [...g.nodes.byWhat.keys()].filter(isKey).length;
 
-  const queue: Item[] = [
-    {
-      graph: g,
-      cost: 0,
-      keysHeld: Immutable.Set(),
-      keyOrder: "",
-    },
-  ];
+  const bestScores = new Map<string, number>().set(
+    stateToString(currentState),
+    currentScore,
+  );
+  const visited = new Set<string>();
+  const seenUnvisited = new Set<string>();
 
-  return solveForQueue(queue, numberOfKeys);
+  while (true) {
+    const cs = stateToString(currentState);
+    if (visited.has(cs)) throw "124";
+
+    for (const { neighbourState, costFromHere } of unvisitedNeighbours(
+      g,
+      numberOfKeys,
+      currentState,
+      visited,
+    )) {
+      const ns = stateToString(neighbourState);
+      if (visited.has(ns)) throw "133";
+
+      seenUnvisited.add(ns);
+
+      const newScore = currentScore + costFromHere;
+      const existingScore = bestScores.get(ns);
+      if (existingScore === undefined || newScore < existingScore)
+        bestScores.set(ns, newScore);
+    }
+
+    visited.add(stateToString(currentState));
+    seenUnvisited.delete(cs);
+
+    if (currentState === SOLVED) {
+      const answer = bestScores.get(SOLVED);
+      if (answer === undefined) throw "";
+      return answer;
+    }
+
+    const nextNodes = [...seenUnvisited]
+      .map((state) => {
+        const bestScore = bestScores.get(state);
+        return {
+          stateString: state,
+          bestScore: bestScore === undefined ? Infinity : bestScore,
+        };
+      })
+      .sort((a, b) => a.bestScore - b.bestScore);
+
+    const nextNode = nextNodes[0];
+    if (!nextNode) throw "No candidate next node";
+    if (nextNode.bestScore === Infinity) throw "No solution";
+
+    if (visited.has(nextNode.stateString)) throw "159";
+
+    currentState = stringToState(nextNode.stateString);
+    currentScore = nextNode.bestScore;
+  }
 };
