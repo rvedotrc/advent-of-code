@@ -1,9 +1,3 @@
-type N<S, K> = {
-  state: S;
-  key: K;
-  distance: number;
-};
-
 export const solve = <S, K = string>(
   initialState: S,
   keyMaker: (state: S) => K,
@@ -15,7 +9,7 @@ export const solve = <S, K = string>(
   const visited = new Set<K>();
   const seenUnvisited = new Map<K, S>();
 
-  let current: N<S, K> = {
+  let current = {
     state: initialState,
     key: initialKey,
     distance: 0,
