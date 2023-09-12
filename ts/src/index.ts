@@ -2,15 +2,11 @@ import * as fs from "fs";
 
 import { graphToDot } from "./dot";
 import { graphBuilder } from "./graphBuilder";
-import { reduceSpaces } from "./reduceSpaces";
 import { solve } from "./solve";
 
 const run = (filename: string, dotFile: string) => {
   const text: string = fs.readFileSync(filename).toString();
-  let g = graphBuilder(text);
-  g.dump();
-
-  g = reduceSpaces(g);
+  const g = graphBuilder(text);
   g.dump();
 
   fs.writeFileSync(dotFile, graphToDot(g));
