@@ -73,7 +73,7 @@ const getNextStates = (state: State): { state: State; distance: Cost }[] => {
 };
 
 export const solve = (initialGraph: Graph): number | undefined =>
-  djikstra.solve<State>(
+  djikstra.solve(
     {
       solved: false,
       graph: reduceSpaces(initialGraph),
