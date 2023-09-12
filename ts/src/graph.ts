@@ -1,7 +1,7 @@
 import { Edges } from "./edges";
 import { Nodes } from "./nodes";
 
-export type Position = string;
+export type Position = number;
 export type What = string;
 export type Cost = number;
 
@@ -68,5 +68,9 @@ export class Graph {
 
   public removeEdge(from: Position, to: Position): Graph {
     return new Graph(this.nodes, this.edges.remove(from, to));
+  }
+
+  public changeNode(position: Position, newWhat: What): Graph {
+    return new Graph(this.nodes.change(position, newWhat), this.edges);
   }
 }

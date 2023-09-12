@@ -19,7 +19,7 @@ const findSpace = (
 };
 
 const pairs = (
-  neighbours: [string, number][],
+  neighbours: [Position, Cost][],
 ): { fromPosition: Position; toPosition: Position; cost: Cost }[] => {
   const answer: { fromPosition: Position; toPosition: Position; cost: Cost }[] =
     [];

@@ -54,4 +54,23 @@ export class Nodes {
       ),
     );
   }
+
+  public change(position: Position, newWhat: What): Nodes {
+    const oldWhat = this.byPosition.get(position);
+    if (oldWhat === undefined) throw "";
+    if (oldWhat === newWhat) return this;
+
+    return new Nodes(
+      this.byPosition.set(position, newWhat),
+      this.byWhat
+        .set(
+          oldWhat,
+          (this.byWhat.get(oldWhat) || Immutable.Set()).remove(position),
+        )
+        .set(
+          newWhat,
+          (this.byWhat.get(newWhat) || Immutable.Set()).add(position),
+        ),
+    );
+  }
 }

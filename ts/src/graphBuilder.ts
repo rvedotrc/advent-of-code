@@ -4,11 +4,11 @@ import { Graph as Graph, Position } from "./graph";
 export const graphBuilder = (text: string): Graph => {
   let g = Graph.empty();
 
-  const xyToPos = (x: number, y: number): Position => `(${x},${y})`;
-
   const rows = text.trimEnd().split("\n");
   if (rows.length === 0) throw "No rows";
   if (rows[0].length === 0) throw "No columns";
+
+  const xyToPos = (x: number, y: number): Position => y * rows[0].length + x;
 
   for (const row of rows) {
     if (row.length !== rows[0].length) throw "Unequal rows";
