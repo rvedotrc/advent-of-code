@@ -1,3 +1,5 @@
+import * as Immutable from "immutable";
+
 import { Edges } from "./edges";
 import { Nodes } from "./nodes";
 
@@ -72,5 +74,11 @@ export class Graph {
 
   public changeNode(position: Position, newWhat: What): Graph {
     return new Graph(this.nodes.change(position, newWhat), this.edges);
+  }
+
+  public changeAll(oldWhat: What, newWhat: What): Graph {
+    const positions = this.nodes.byWhat.get(oldWhat) || Immutable.Set();
+
+    return positions.reduce((g, pos) => g.changeNode(pos, newWhat), this);
   }
 }

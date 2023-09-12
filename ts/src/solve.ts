@@ -1,168 +1,126 @@
 import * as Immutable from "immutable";
 
-import { CURRENT, doorFor, isDoor, isKey, keyFor, SPACE } from "./cells";
+import { CURRENT, isKey, SPACE } from "./cells";
 import { Cost, Graph, Position } from "./graph";
 import { reduceSpaces } from "./reduceSpaces";
-
-const SOLVED = "SOLVED";
 
 const getCurrentPositions = (g: Graph): Immutable.Set<Position> =>
   g.nodes.byWhat.get(CURRENT) || Immutable.Set();
 
-type State =
-  | typeof SOLVED
-  | {
-      heldKeys: Immutable.Set<string>;
-      currentPositions: Immutable.Set<number>;
-    };
-
-const stateToString = (state: State) =>
-  state === SOLVED
-    ? SOLVED
-    : `${[...state.heldKeys].sort().join("")}/${[...state.currentPositions]
-        .sort((a, b) => a - b)
-        .map(String)
-        .join(",")}`;
-
-const stringToState = (s: string): State => {
-  if (s === SOLVED) return SOLVED;
-
-  const [keys, positions] = s.split("/");
-
-  return {
-    heldKeys: Immutable.Set(keys.split("")),
-    currentPositions: Immutable.Set(positions.split(",").map(Number)),
-  };
+const SOLVED = {
+  solved: true as const,
+  key: "solved",
 };
 
-const unlockDoors = (
-  g: Graph,
-  keysHeld: Immutable.Set<string>,
-  currentPositions: Immutable.Set<Position>,
-) => {
-  const toRemove = keysHeld.flatMap((k) => [k, doorFor(k)]);
+type SolvedState = typeof SOLVED;
 
-  const positionsToRemove = toRemove.flatMap(
-    (kd): Immutable.Set<Position> => g.nodes.byWhat.get(kd) || Immutable.Set(),
-  );
+class UnsolvedState {
+  public readonly solved: false;
+  public readonly graph: Graph;
+  public readonly keysHeld: Immutable.Set<string>;
+  public readonly currentPositions: Immutable.Set<Position>;
+  public readonly key: string;
 
-  for (const pos of positionsToRemove) {
-    if (!currentPositions.has(pos)) g = g.changeNode(pos, SPACE);
+  constructor(graph: Graph, keysHeld: Immutable.Set<string>) {
+    this.graph = reduceSpaces(graph);
+    this.keysHeld = keysHeld;
+    this.currentPositions = getCurrentPositions(graph);
+    this.key = `${[...keysHeld].sort().join("")}/${[...this.currentPositions]
+      .sort((a, b) => a - b)
+      .join(",")}`;
   }
+}
 
-  return reduceSpaces(g);
-};
+type State = (UnsolvedState & { solved: false }) | SolvedState;
 
 const unvisitedNeighbours = (
-  g: Graph,
   numberOfKeys: number,
   currentState: State,
   visited: Set<string>,
 ): { neighbourState: State; costFromHere: Cost }[] => {
-  if (currentState === SOLVED) return [];
-
-  g = unlockDoors(g, currentState.heldKeys, currentState.currentPositions);
+  if (currentState.solved) return [];
 
   const out: ReturnType<typeof unvisitedNeighbours> = [];
 
   for (const fromPosition of currentState.currentPositions) {
-    const edges = g.edges.getByPosition(fromPosition);
+    const edges = currentState.graph.edges.getByPosition(fromPosition);
     if (!edges) throw "";
 
     for (const [toPosition, costFromHere] of edges.entries()) {
-      const what = g.nodes.byPosition.get(toPosition);
+      const what = currentState.graph.nodes.byPosition.get(toPosition);
       if (what === undefined) throw "";
+      if (!isKey(what)) continue;
 
-      if (isDoor(what) && !currentState.heldKeys.has(keyFor(what))) continue;
+      const newKeysHeld = currentState.keysHeld.add(what);
 
-      if (isKey(what)) {
-        const newKeysHeld = currentState.heldKeys.add(what);
-
-        if (newKeysHeld.size === numberOfKeys) {
-          out.push({ neighbourState: SOLVED, costFromHere });
-        } else {
-          out.push({
-            neighbourState: {
-              heldKeys: newKeysHeld,
-              currentPositions: currentState.currentPositions
-                .delete(fromPosition)
-                .add(toPosition),
-            },
-            costFromHere,
-          });
-        }
+      if (newKeysHeld.size === numberOfKeys) {
+        out.push({ neighbourState: SOLVED, costFromHere });
       } else {
+        const newGraph = currentState.graph
+          .changeNode(fromPosition, SPACE)
+          .changeNode(toPosition, CURRENT)
+          .changeAll(what.toUpperCase(), SPACE);
+
         out.push({
-          neighbourState: {
-            ...currentState,
-            currentPositions: currentState.currentPositions
-              .delete(fromPosition)
-              .add(toPosition),
-          },
+          neighbourState: new UnsolvedState(newGraph, newKeysHeld),
           costFromHere,
         });
       }
     }
   }
 
-  const r = out.filter(
-    (ans) => !visited.has(stateToString(ans.neighbourState)),
-  );
+  const r = out.filter((ans) => !visited.has(ans.neighbourState.key));
 
   return r;
 };
 
-export const solve = (g: Graph): number => {
-  let currentState: State = {
-    heldKeys: Immutable.Set(),
-    currentPositions: getCurrentPositions(g),
-  } as State;
+export const solve = (initialGraph: Graph): number => {
+  let currentState: State = new UnsolvedState(initialGraph, Immutable.Set());
   let currentScore = 0;
 
-  const numberOfKeys = [...g.nodes.byWhat.keys()].filter(isKey).length;
+  const numberOfKeys = [...initialGraph.nodes.byWhat.keys()].filter(
+    isKey,
+  ).length;
 
   const bestScores = new Map<string, number>().set(
-    stateToString(currentState),
+    currentState.key,
     currentScore,
   );
   const visited = new Set<string>();
-  const seenUnvisited = new Set<string>();
+  const seenUnvisited = new Map<string, State>();
 
   while (true) {
-    const cs = stateToString(currentState);
-    if (visited.has(cs)) throw "124";
+    if (visited.has(currentState.key)) throw "124";
 
     for (const { neighbourState, costFromHere } of unvisitedNeighbours(
-      g,
       numberOfKeys,
       currentState,
       visited,
     )) {
-      const ns = stateToString(neighbourState);
-      if (visited.has(ns)) throw "133";
+      if (visited.has(neighbourState.key)) throw "133";
 
-      seenUnvisited.add(ns);
+      seenUnvisited.set(neighbourState.key, neighbourState);
 
       const newScore = currentScore + costFromHere;
-      const existingScore = bestScores.get(ns);
+      const existingScore = bestScores.get(neighbourState.key);
       if (existingScore === undefined || newScore < existingScore)
-        bestScores.set(ns, newScore);
+        bestScores.set(neighbourState.key, newScore);
     }
 
-    visited.add(stateToString(currentState));
-    seenUnvisited.delete(cs);
+    visited.add(currentState.key);
+    seenUnvisited.delete(currentState.key);
 
-    if (currentState === SOLVED) {
-      const answer = bestScores.get(SOLVED);
+    if (currentState.solved) {
+      const answer = bestScores.get(currentState.key);
       if (answer === undefined) throw "";
       return answer;
     }
 
-    const nextNodes = [...seenUnvisited]
-      .map((state) => {
-        const bestScore = bestScores.get(state);
+    const nextNodes = [...seenUnvisited.entries()]
+      .map(([key, state]) => {
+        const bestScore = bestScores.get(key);
         return {
-          stateString: state,
+          state,
           bestScore: bestScore === undefined ? Infinity : bestScore,
         };
       })
@@ -172,9 +130,9 @@ export const solve = (g: Graph): number => {
     if (!nextNode) throw "No candidate next node";
     if (nextNode.bestScore === Infinity) throw "No solution";
 
-    if (visited.has(nextNode.stateString)) throw "159";
+    if (visited.has(nextNode.state.key)) throw "159";
 
-    currentState = stringToState(nextNode.stateString);
+    currentState = nextNode.state;
     currentScore = nextNode.bestScore;
   }
 };
