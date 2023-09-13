@@ -4,21 +4,18 @@ import { Cost, Position } from "./graph";
 
 export class Edges {
   public readonly map: Immutable.Map<Position, Immutable.Map<Position, Cost>>;
+  public readonly size: number;
 
   public static empty(): Edges {
-    return new Edges(Immutable.Map());
+    return new Edges(Immutable.Map(), 0);
   }
 
   private constructor(
     map: Immutable.Map<Position, Immutable.Map<Position, Cost>>,
+    size: number,
   ) {
     this.map = map;
-  }
-
-  public get size(): number {
-    return [...this.map.values()]
-      .map((s) => s.size)
-      .reduce((prev, curr) => prev + curr, 0);
+    this.size = size;
   }
 
   public getByPosition(position: Position): Immutable.Map<Position, Cost> {
@@ -30,7 +27,7 @@ export class Edges {
 
     if (this.map.get(fromPosition)?.get(toPosition) !== undefined) throw "";
 
-    return this.set(fromPosition, toPosition, cost);
+    return this.set(fromPosition, toPosition, cost, 1);
   }
 
   public addIfBetter(
@@ -41,10 +38,20 @@ export class Edges {
     const existingCost = this.map.get(fromPosition)?.get(toPosition);
     if (existingCost !== undefined && existingCost < cost) return this;
 
-    return this.set(fromPosition, toPosition, cost);
+    return this.set(
+      fromPosition,
+      toPosition,
+      cost,
+      existingCost === undefined ? 1 : 0,
+    );
   }
 
-  private set(fromPosition: Position, toPosition: Position, cost: Cost): Edges {
+  private set(
+    fromPosition: Position,
+    toPosition: Position,
+    cost: Cost,
+    sizeDelta: 0 | 1,
+  ): Edges {
     return new Edges(
       this.map
         .set(
@@ -55,6 +62,7 @@ export class Edges {
           toPosition,
           (this.map.get(toPosition) || Immutable.Map()).set(fromPosition, cost),
         ),
+      this.size + sizeDelta,
     );
   }
 
@@ -71,6 +79,7 @@ export class Edges {
           toPosition,
           (this.map.get(toPosition) || Immutable.Map()).delete(fromPosition),
         ),
+      this.size - 1,
     );
   }
 }
