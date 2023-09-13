@@ -1,5 +1,12 @@
 import * as Immutable from "immutable";
 
+// An immutable set of undirected edges, where each edge joins
+// a distinct pair of nodes (identified by their Position).
+// Each node has a Value.
+
+// Position and Value must be types which can be used as Map keys or
+// Set members.
+
 export class Edges<Position, Value> {
   public readonly map: Immutable.Map<Position, Immutable.Map<Position, Value>>;
   public readonly size: number;
@@ -23,13 +30,13 @@ export class Edges<Position, Value> {
   public add(
     fromPosition: Position,
     toPosition: Position,
-    cost: Value,
+    value: Value,
   ): Edges<Position, Value> {
     if (fromPosition === toPosition) throw "";
 
     if (this.map.get(fromPosition)?.get(toPosition) !== undefined) throw "";
 
-    return this.set(fromPosition, toPosition, cost, 1);
+    return this.set(fromPosition, toPosition, value, 1);
   }
 
   public addIfBetter(
@@ -53,18 +60,24 @@ export class Edges<Position, Value> {
   private set(
     fromPosition: Position,
     toPosition: Position,
-    cost: Value,
+    value: Value,
     sizeDelta: 0 | 1,
   ): Edges<Position, Value> {
     return new Edges(
       this.map
         .set(
           fromPosition,
-          (this.map.get(fromPosition) || Immutable.Map()).set(toPosition, cost),
+          (this.map.get(fromPosition) || Immutable.Map()).set(
+            toPosition,
+            value,
+          ),
         )
         .set(
           toPosition,
-          (this.map.get(toPosition) || Immutable.Map()).set(fromPosition, cost),
+          (this.map.get(toPosition) || Immutable.Map()).set(
+            fromPosition,
+            value,
+          ),
         ),
       this.size + sizeDelta,
     );

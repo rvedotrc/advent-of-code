@@ -1,5 +1,12 @@
 import * as Immutable from "immutable";
 
+// An immutable set of nodes (uniquely identified by their Position),
+// where each node has a Value. You can query for all nodes with
+// a specific value.
+
+// Position and Value must be types which can be used as Map keys or
+// Set members.
+
 export class Nodes<Position, Value> {
   public static empty<P, V>(): Nodes<P, V> {
     return new Nodes(Immutable.Map(), Immutable.Map());

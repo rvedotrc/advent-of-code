@@ -3,6 +3,13 @@ import * as Immutable from "immutable";
 import { Edges } from "./edges";
 import { Nodes } from "./nodes";
 
+// Represents an immutable undirected graph, where each node has a
+// "position" (its identity) and a "node value", and each edge has
+// an "edge value". No two edges can join the same pair of nodes.
+//
+// Position and NodeValue must be types that can be used as Map
+// keys or Set members.
+
 export class Graph<Position, NodeValue, EdgeValue> {
   public readonly nodes: Nodes<Position, NodeValue>;
   public readonly edges: Edges<Position, EdgeValue>;
@@ -33,9 +40,9 @@ export class Graph<Position, NodeValue, EdgeValue> {
 
   public addNode(
     position: Position,
-    what: NodeValue,
+    value: NodeValue,
   ): Graph<Position, NodeValue, EdgeValue> {
-    return new Graph(this.nodes.add(position, what), this.edges);
+    return new Graph(this.nodes.add(position, value), this.edges);
   }
 
   public removeNode(position: Position): Graph<Position, NodeValue, EdgeValue> {
@@ -47,27 +54,27 @@ export class Graph<Position, NodeValue, EdgeValue> {
   public addEdge(
     fromPosition: Position,
     toPosition: Position,
-    cost: EdgeValue,
+    value: EdgeValue,
   ): Graph<Position, NodeValue, EdgeValue> {
     if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
     return new Graph(
       this.nodes,
-      this.edges.add(fromPosition, toPosition, cost),
+      this.edges.add(fromPosition, toPosition, value),
     );
   }
 
   public addEdgeIfBetter(
     fromPosition: Position,
     toPosition: Position,
-    cost: EdgeValue,
+    value: EdgeValue,
     better: (a: EdgeValue, b: EdgeValue) => boolean,
   ): Graph<Position, NodeValue, EdgeValue> {
     if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
     return new Graph(
       this.nodes,
-      this.edges.addIfBetter(fromPosition, toPosition, cost, better),
+      this.edges.addIfBetter(fromPosition, toPosition, value, better),
     );
   }
 
@@ -80,17 +87,17 @@ export class Graph<Position, NodeValue, EdgeValue> {
 
   public changeNode(
     position: Position,
-    newWhat: NodeValue,
+    newValue: NodeValue,
   ): Graph<Position, NodeValue, EdgeValue> {
-    return new Graph(this.nodes.change(position, newWhat), this.edges);
+    return new Graph(this.nodes.change(position, newValue), this.edges);
   }
 
   public changeAll(
-    oldWhat: NodeValue,
-    newWhat: NodeValue,
+    oldValue: NodeValue,
+    newValue: NodeValue,
   ): Graph<Position, NodeValue, EdgeValue> {
-    const positions = this.nodes.byValue.get(oldWhat) || Immutable.Set();
+    const positions = this.nodes.byValue.get(oldValue) || Immutable.Set();
 
-    return positions.reduce((g, pos) => g.changeNode(pos, newWhat), this);
+    return positions.reduce((g, pos) => g.changeNode(pos, newValue), this);
   }
 }
