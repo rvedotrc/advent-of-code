@@ -1,21 +1,19 @@
 import * as Immutable from "immutable";
 
-import { Position, What } from "./graph";
-
-export class Nodes {
-  public static empty(): Nodes {
+export class Nodes<Position, Value> {
+  public static empty<P, V>(): Nodes<P, V> {
     return new Nodes(Immutable.Map(), Immutable.Map());
   }
 
-  public readonly byPosition: Immutable.Map<Position, What>;
-  public readonly byWhat: Immutable.Map<What, Immutable.Set<Position>>;
+  public readonly byPosition: Immutable.Map<Position, Value>;
+  public readonly byValue: Immutable.Map<Value, Immutable.Set<Position>>;
 
   private constructor(
-    byPosition: Immutable.Map<Position, What>,
-    byWhat: Immutable.Map<What, Immutable.Set<Position>>,
+    byPosition: Immutable.Map<Position, Value>,
+    byValue: Immutable.Map<Value, Immutable.Set<Position>>,
   ) {
     this.byPosition = byPosition;
-    this.byWhat = byWhat;
+    this.byValue = byValue;
   }
 
   public get size(): number {
@@ -26,50 +24,50 @@ export class Nodes {
     return this.byPosition.has(position);
   }
 
-  public getByWhat(what: What): Immutable.Set<Position> {
-    return this.byWhat.get(what) || Immutable.Set();
+  public getByValue(value: Value): Immutable.Set<Position> {
+    return this.byValue.get(value) || Immutable.Set();
   }
 
-  public add(position: Position, what: What): Nodes {
+  public add(position: Position, value: Value): Nodes<Position, Value> {
     if (this.byPosition.has(position)) throw "";
 
     return new Nodes(
-      this.byPosition.set(position, what),
-      this.byWhat.set(
-        what,
-        (this.byWhat.get(what) || Immutable.Set()).add(position),
+      this.byPosition.set(position, value),
+      this.byValue.set(
+        value,
+        (this.byValue.get(value) || Immutable.Set()).add(position),
       ),
     );
   }
 
-  public remove(position: Position): Nodes {
-    const oldWhat = this.byPosition.get(position);
-    if (oldWhat === undefined) throw "";
+  public remove(position: Position): Nodes<Position, Value> {
+    const oldValue = this.byPosition.get(position);
+    if (oldValue === undefined) throw "";
 
     return new Nodes(
       this.byPosition.delete(position),
-      this.byWhat.set(
-        oldWhat,
-        (this.byWhat.get(oldWhat) || Immutable.Set()).remove(position),
+      this.byValue.set(
+        oldValue,
+        (this.byValue.get(oldValue) || Immutable.Set()).remove(position),
       ),
     );
   }
 
-  public change(position: Position, newWhat: What): Nodes {
-    const oldWhat = this.byPosition.get(position);
-    if (oldWhat === undefined) throw "";
-    if (oldWhat === newWhat) return this;
+  public change(position: Position, newValue: Value): Nodes<Position, Value> {
+    const oldValue = this.byPosition.get(position);
+    if (oldValue === undefined) throw "";
+    if (oldValue === newValue) return this;
 
     return new Nodes(
-      this.byPosition.set(position, newWhat),
-      this.byWhat
+      this.byPosition.set(position, newValue),
+      this.byValue
         .set(
-          oldWhat,
-          (this.byWhat.get(oldWhat) || Immutable.Set()).remove(position),
+          oldValue,
+          (this.byValue.get(oldValue) || Immutable.Set()).remove(position),
         )
         .set(
-          newWhat,
-          (this.byWhat.get(newWhat) || Immutable.Set()).add(position),
+          newValue,
+          (this.byValue.get(newValue) || Immutable.Set()).add(position),
         ),
     );
   }

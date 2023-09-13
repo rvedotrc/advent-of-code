@@ -1,14 +1,12 @@
 import * as Immutable from "immutable";
 
-import { SPACE } from "./cells";
-import { Cost, Graph, Position } from "./graph";
+import { Graph } from "./graph";
 
-const findSpace = (
-  g: Graph,
-):
-  | { position: Position; neighbours: Immutable.Map<Position, Cost> }
-  | undefined => {
-  const spaces = g.nodes.getByWhat(SPACE);
+const findSpace = <P, N, E>(
+  g: Graph<P, N, E>,
+  space: N,
+): { position: P; neighbours: Immutable.Map<P, E> } | undefined => {
+  const spaces = g.nodes.getByValue(space);
   const iter = spaces.values().next();
   if (iter.done) return undefined;
 
@@ -18,8 +16,9 @@ const findSpace = (
   };
 };
 
-const pairs = (
+const pairs = <Position, Cost>(
   neighbours: [Position, Cost][],
+  reduce: (a: Cost, b: Cost) => Cost,
 ): { fromPosition: Position; toPosition: Position; cost: Cost }[] => {
   const answer: { fromPosition: Position; toPosition: Position; cost: Cost }[] =
     [];
@@ -29,7 +28,7 @@ const pairs = (
       answer.push({
         fromPosition: neighbours[i][0],
         toPosition: neighbours[j][0],
-        cost: neighbours[i][1] + neighbours[j][1],
+        cost: reduce(neighbours[i][1], neighbours[j][1]),
       });
     }
   }
@@ -37,14 +36,19 @@ const pairs = (
   return answer;
 };
 
-export const reduceSpaces = (g: Graph): Graph => {
+export const reduceSpaces = <P, N, E>(
+  g: Graph<P, N, E>,
+  space: N,
+  combineEdgeValues: (a: E, b: E) => E,
+  edgeValueIsBetter: (a: E, b: E) => boolean,
+): Graph<P, N, E> => {
   while (true) {
-    const toRemove = findSpace(g);
+    const toRemove = findSpace(g, space);
     if (!toRemove) break;
 
     const neighbours = [...toRemove.neighbours.entries()];
 
-    const combos = pairs(neighbours);
+    const combos = pairs(neighbours, combineEdgeValues);
 
     for (const neighbour of neighbours) {
       g = g.removeEdge(toRemove.position, neighbour[0]);
@@ -53,7 +57,12 @@ export const reduceSpaces = (g: Graph): Graph => {
     g = g.removeNode(toRemove.position);
 
     for (const pair of combos) {
-      g = g.addEdgeIfBetter(pair.fromPosition, pair.toPosition, pair.cost);
+      g = g.addEdgeIfBetter(
+        pair.fromPosition,
+        pair.toPosition,
+        pair.cost,
+        edgeValueIsBetter,
+      );
     }
   }
 

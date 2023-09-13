@@ -3,19 +3,18 @@ import * as Immutable from "immutable";
 import { Edges } from "./edges";
 import { Nodes } from "./nodes";
 
-export type Position = number;
-export type What = string;
-export type Cost = number;
+export class Graph<Position, NodeValue, EdgeValue> {
+  public readonly nodes: Nodes<Position, NodeValue>;
+  public readonly edges: Edges<Position, EdgeValue>;
 
-export class Graph {
-  public readonly nodes: Nodes;
-  public readonly edges: Edges;
-
-  public static empty(): Graph {
+  public static empty<P, N, E>(): Graph<P, N, E> {
     return new Graph(Nodes.empty(), Edges.empty());
   }
 
-  private constructor(nodes: Nodes, edges: Edges) {
+  private constructor(
+    nodes: Nodes<Position, NodeValue>,
+    edges: Edges<Position, EdgeValue>,
+  ) {
     this.nodes = nodes;
     this.edges = edges;
   }
@@ -32,11 +31,14 @@ export class Graph {
     console.log(this.toString());
   }
 
-  public addNode(position: Position, what: What): Graph {
+  public addNode(
+    position: Position,
+    what: NodeValue,
+  ): Graph<Position, NodeValue, EdgeValue> {
     return new Graph(this.nodes.add(position, what), this.edges);
   }
 
-  public removeNode(position: Position): Graph {
+  public removeNode(position: Position): Graph<Position, NodeValue, EdgeValue> {
     if (this.edges.getByPosition(position).size > 0) throw "";
 
     return new Graph(this.nodes.remove(position), this.edges);
@@ -45,8 +47,8 @@ export class Graph {
   public addEdge(
     fromPosition: Position,
     toPosition: Position,
-    cost: Cost,
-  ): Graph {
+    cost: EdgeValue,
+  ): Graph<Position, NodeValue, EdgeValue> {
     if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
     return new Graph(
@@ -58,26 +60,36 @@ export class Graph {
   public addEdgeIfBetter(
     fromPosition: Position,
     toPosition: Position,
-    cost: Cost,
-  ): Graph {
+    cost: EdgeValue,
+    better: (a: EdgeValue, b: EdgeValue) => boolean,
+  ): Graph<Position, NodeValue, EdgeValue> {
     if (!this.nodes.has(fromPosition) || !this.nodes.has(toPosition)) throw "";
 
     return new Graph(
       this.nodes,
-      this.edges.addIfBetter(fromPosition, toPosition, cost),
+      this.edges.addIfBetter(fromPosition, toPosition, cost, better),
     );
   }
 
-  public removeEdge(from: Position, to: Position): Graph {
+  public removeEdge(
+    from: Position,
+    to: Position,
+  ): Graph<Position, NodeValue, EdgeValue> {
     return new Graph(this.nodes, this.edges.remove(from, to));
   }
 
-  public changeNode(position: Position, newWhat: What): Graph {
+  public changeNode(
+    position: Position,
+    newWhat: NodeValue,
+  ): Graph<Position, NodeValue, EdgeValue> {
     return new Graph(this.nodes.change(position, newWhat), this.edges);
   }
 
-  public changeAll(oldWhat: What, newWhat: What): Graph {
-    const positions = this.nodes.byWhat.get(oldWhat) || Immutable.Set();
+  public changeAll(
+    oldWhat: NodeValue,
+    newWhat: NodeValue,
+  ): Graph<Position, NodeValue, EdgeValue> {
+    const positions = this.nodes.byValue.get(oldWhat) || Immutable.Set();
 
     return positions.reduce((g, pos) => g.changeNode(pos, newWhat), this);
   }

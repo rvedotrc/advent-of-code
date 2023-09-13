@@ -2,11 +2,13 @@ import * as Immutable from "immutable";
 
 import { CURRENT, isKey, SPACE } from "./cells";
 import * as djikstra from "./djikstra";
-import { Cost, Graph, Position } from "./graph";
+import { graphBuilder } from "./graphBuilder";
 import { reduceSpaces } from "./reduceSpaces";
 
-const getCurrentPositions = (g: Graph): Immutable.Set<Position> =>
-  g.nodes.byWhat.get(CURRENT) || Immutable.Set();
+type Graph = ReturnType<typeof graphBuilder>;
+
+const getCurrentPositions = (g: Graph): Immutable.Set<number> =>
+  g.nodes.byValue.get(CURRENT) || Immutable.Set();
 
 const SOLVED: SolvedState = { solved: true };
 
@@ -16,10 +18,18 @@ type UnsolvedState = {
   solved: false;
   graph: Graph;
   keysRemaining: Immutable.Set<string>;
-  currentPositions: Immutable.Set<Position>;
+  currentPositions: Immutable.Set<number>;
 };
 
 type State = UnsolvedState | SolvedState;
+
+const reduceGraph = (g: Graph) =>
+  reduceSpaces(
+    g,
+    SPACE,
+    (a: number, b: number) => a + b,
+    (a: number, b: number) => a < b,
+  );
 
 const stateToKey = (s: State) =>
   s.solved
@@ -30,7 +40,7 @@ const stateToKey = (s: State) =>
         .sort((a, b) => a - b)
         .join(",")}`;
 
-const getNextStates = (state: State): { state: State; distance: Cost }[] => {
+const getNextStates = (state: State): { state: State; distance: number }[] => {
   if (state.solved) return [];
 
   const out: ReturnType<typeof getNextStates> = [];
@@ -57,7 +67,7 @@ const getNextStates = (state: State): { state: State; distance: Cost }[] => {
         out.push({
           state: {
             solved: false,
-            graph: reduceSpaces(newGraph),
+            graph: reduceGraph(newGraph),
             keysRemaining: newKeysRemaining,
             currentPositions: state.currentPositions
               .delete(fromPosition)
@@ -76,9 +86,9 @@ export const solve = (initialGraph: Graph): number | undefined =>
   djikstra.solve(
     {
       solved: false,
-      graph: reduceSpaces(initialGraph),
+      graph: reduceGraph(initialGraph),
       keysRemaining: Immutable.Set(
-        [...initialGraph.nodes.byWhat.keys()].filter(isKey),
+        [...initialGraph.nodes.byValue.keys()].filter(isKey),
       ),
       currentPositions: getCurrentPositions(initialGraph),
     },

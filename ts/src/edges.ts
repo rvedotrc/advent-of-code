@@ -1,28 +1,30 @@
 import * as Immutable from "immutable";
 
-import { Cost, Position } from "./graph";
-
-export class Edges {
-  public readonly map: Immutable.Map<Position, Immutable.Map<Position, Cost>>;
+export class Edges<Position, Value> {
+  public readonly map: Immutable.Map<Position, Immutable.Map<Position, Value>>;
   public readonly size: number;
 
-  public static empty(): Edges {
+  public static empty<P, V>(): Edges<P, V> {
     return new Edges(Immutable.Map(), 0);
   }
 
   private constructor(
-    map: Immutable.Map<Position, Immutable.Map<Position, Cost>>,
+    map: Immutable.Map<Position, Immutable.Map<Position, Value>>,
     size: number,
   ) {
     this.map = map;
     this.size = size;
   }
 
-  public getByPosition(position: Position): Immutable.Map<Position, Cost> {
+  public getByPosition(position: Position): Immutable.Map<Position, Value> {
     return this.map.get(position) || Immutable.Map();
   }
 
-  public add(fromPosition: Position, toPosition: Position, cost: Cost): Edges {
+  public add(
+    fromPosition: Position,
+    toPosition: Position,
+    cost: Value,
+  ): Edges<Position, Value> {
     if (fromPosition === toPosition) throw "";
 
     if (this.map.get(fromPosition)?.get(toPosition) !== undefined) throw "";
@@ -33,25 +35,27 @@ export class Edges {
   public addIfBetter(
     fromPosition: Position,
     toPosition: Position,
-    cost: Cost,
-  ): Edges {
-    const existingCost = this.map.get(fromPosition)?.get(toPosition);
-    if (existingCost !== undefined && existingCost < cost) return this;
+    value: Value,
+    better: (a: Value, b: Value) => boolean,
+  ): Edges<Position, Value> {
+    const existingValue = this.map.get(fromPosition)?.get(toPosition);
+    if (existingValue !== undefined && !better(value, existingValue))
+      return this;
 
     return this.set(
       fromPosition,
       toPosition,
-      cost,
-      existingCost === undefined ? 1 : 0,
+      value,
+      existingValue === undefined ? 1 : 0,
     );
   }
 
   private set(
     fromPosition: Position,
     toPosition: Position,
-    cost: Cost,
+    cost: Value,
     sizeDelta: 0 | 1,
-  ): Edges {
+  ): Edges<Position, Value> {
     return new Edges(
       this.map
         .set(
@@ -66,7 +70,10 @@ export class Edges {
     );
   }
 
-  public remove(fromPosition: Position, toPosition: Position): Edges {
+  public remove(
+    fromPosition: Position,
+    toPosition: Position,
+  ): Edges<Position, Value> {
     if (this.map.get(fromPosition)?.get(toPosition) === undefined) throw "";
 
     return new Edges(

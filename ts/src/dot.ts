@@ -1,8 +1,8 @@
-import { Graph, Position } from "./graph";
+import { Graph } from "./graph";
 
-const positionToId = (position: Position) => `"${position}"`;
+const positionToId = (position: number) => `"${position}"`;
 
-export const graphToDot = (g: Graph): string => {
+export const graphToDot = (g: Graph<number, string, number>): string => {
   const s: string[] = [];
 
   s.push("graph {");
