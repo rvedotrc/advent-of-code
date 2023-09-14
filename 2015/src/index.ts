@@ -63,7 +63,7 @@ const test = (): void => {
       const partSuffix = partKey.replace("Part", "");
       console.log(`${dayKey} ${partKey}`);
 
-      ok &&= new part().test();
+      ok &&= [new part().test()].flatMap(t => t).every(Boolean);
       ok &&= runTest(part, daySuffix, partSuffix, `input/${dayKey}`);
       ok &&= runTest(
         part,

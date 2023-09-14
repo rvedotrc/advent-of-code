@@ -1,13 +1,15 @@
-export type Part = {
-  calculate(lines: string[]): string;
-  test(): boolean;
-};
-
 export type PartBuilder = {
   new (): Part;
 };
 
-export class BasePart {
+export class Part {
+  calculate(_lines: string[]): string {
+    return "not implemented";
+  }
+  test(): boolean | boolean[] {
+    return true;
+  }
+
   protected checkResult(
     testName: string,
     actual: string,
@@ -20,6 +22,15 @@ export class BasePart {
       console.error(`  FAIL ${testName} # `, { expected, actual });
       return false;
     }
+  }
+
+  protected check(
+    exampleName: string,
+    input: string | string[],
+    expected: string
+  ): boolean {
+    const actual = this.calculate(typeof input === "string" ? [input] : input);
+    return this.checkResult(exampleName, actual, expected);
   }
 }
 
