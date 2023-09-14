@@ -22,16 +22,22 @@ bundle exec rspec
 Running a specific day / part with your input data, e.g. day 3 part 1:
 
 ```
-bundle exec ./bin/test 3 1
+bundle exec ./bin/ruby 3 1
 ```
 
 ## Typescript
 
-Setup (no tests yet):
+Setup:
 
 ```shell
 yarn
 yarn build
+```
+
+Running all tests, and all days + parts:
+
+```
+./bin/ts
 ```
 
 Running a specific day / part with your input data, e.g. day 15 part 2:
