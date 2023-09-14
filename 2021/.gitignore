@@ -1,0 +1,6 @@
+dist/
+input/day*
+node_modules/
+tsconfig.tsbuildinfo
+vendor/bundle/
+yarn.lock

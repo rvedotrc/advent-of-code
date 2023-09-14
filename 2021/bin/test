@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+day_number = ARGV.shift.to_i
+part_number = ARGV.shift.to_i
+
+require_relative '../lib/advent_of_code_2021'
+AdventOfCode2021.test(day_number, part_number)
