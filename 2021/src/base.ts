@@ -14,12 +14,10 @@ export class BasePart {
     expected: string
   ): boolean {
     if (actual === expected) {
-      console.log(`  pass ${testName} (${expected})`);
+      console.log(`  pass ${testName} # `, { answer: expected });
       return true;
     } else {
-      console.log(
-        `  FAIL ${testName} (got ${actual} but expected ${expected})`
-      );
+      console.error(`  FAIL ${testName} # `, { expected, actual });
       return false;
     }
   }

@@ -30,28 +30,35 @@ const runTest = (
   try {
     inputText = fs.readFileSync(inputFile).toString("utf-8").trim().split("\n");
   } catch (e) {
-    if (e.code === "ENOENT") return true;
-    throw e;
-  }
-
-  const outputFile = `${inputBase}.answer.part${partNum.toLowerCase()}`;
-
-  let outputText = "";
-  try {
-    outputText = fs.readFileSync(outputFile).toString("utf-8").trim();
-  } catch (e) {
-    if (e.code === "ENOENT") return true;
+    if (e.code === "ENOENT") {
+      console.info(`  skip ${inputFile} # no input`);
+      return true;
+    }
     throw e;
   }
 
   const actual = new part().calculate(inputText);
-  if (actual !== outputText) {
-    console.error("  example failed", { expected: outputText, actual });
-  } else {
-    console.info("  example passed");
+
+  const outputFile = `${inputBase}.answer.part${partNum.toLowerCase()}`;
+
+  let expected = "";
+  try {
+    expected = fs.readFileSync(outputFile).toString("utf-8").trim();
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      console.info(`  ???? ${inputFile} # `, { answer: actual });
+      return true;
+    }
+    throw e;
   }
 
-  return actual === outputText;
+  if (actual !== expected) {
+    console.error(`  FAIL ${inputFile} # `, { expected, actual });
+  } else {
+    console.info(`  pass ${inputFile} # `, { answer: actual });
+  }
+
+  return actual === expected;
 };
 
 const test = (): void => {
