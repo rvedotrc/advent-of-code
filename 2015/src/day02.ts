@@ -1,7 +1,7 @@
 import * as Base from "./base";
 
 export class Part1 extends Base.Part {
-  calculate(lines: string[]): string {
+  async calculate(lines: string[]): Promise<string> {
     return lines
       .map(line => {
         const [x, y, z] = line.split("x").map(Number);
@@ -16,7 +16,7 @@ export class Part1 extends Base.Part {
       .toString();
   }
 
-  test(): boolean[] {
+  async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
     return [
       this.check("example", "2x3x4", "58"),
       this.check("example", "1x1x10", "43"),
@@ -25,7 +25,7 @@ export class Part1 extends Base.Part {
 }
 
 export class Part2 extends Part1 {
-  calculate(lines: string[]): string {
+  async calculate(lines: string[]): Promise<string> {
     return lines
       .map(line => {
         const [x, y, z] = line.split("x").map(Number);
@@ -38,7 +38,7 @@ export class Part2 extends Part1 {
       .toString();
   }
 
-  test(): boolean[] {
+  async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
     return [
       this.check("example", "2x3x4", "34"),
       this.check("example", "1x1x10", "14"),

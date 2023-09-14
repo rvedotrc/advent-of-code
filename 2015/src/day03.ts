@@ -1,7 +1,7 @@
 import * as Base from "./base";
 
 export class Part1 extends Base.Part {
-  calculate(lines: string[], actors = 1): string {
+  async calculate(lines: string[], actors = 1): Promise<string> {
     const visited = new Set<string>().add("0,0");
     const positions = new Array(actors).fill(0).map(() => ({ x: 0, y: 0 }));
 
@@ -19,7 +19,7 @@ export class Part1 extends Base.Part {
     return visited.size.toString();
   }
 
-  test(): boolean[] {
+  async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
     return [
       this.check("example", ">", "2"),
       this.check("example", "^>v<", "4"),
@@ -29,11 +29,11 @@ export class Part1 extends Base.Part {
 }
 
 export class Part2 extends Part1 {
-  calculate(lines: string[]): string {
+  async calculate(lines: string[]): Promise<string> {
     return super.calculate(lines, 2);
   }
 
-  test(): boolean[] {
+  async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
     return [
       this.check("example", "^v", "3"),
       this.check("example", "^>v<", "3"),

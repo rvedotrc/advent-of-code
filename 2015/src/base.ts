@@ -3,10 +3,10 @@ export type PartBuilder = {
 };
 
 export class Part {
-  calculate(_lines: string[]): string {
+  async calculate(_lines: string[]): Promise<string> {
     return "not implemented";
   }
-  test(): boolean | boolean[] {
+  async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
     return true;
   }
 
@@ -24,12 +24,14 @@ export class Part {
     }
   }
 
-  protected check(
+  protected async check(
     exampleName: string,
     input: string | string[],
     expected: string
-  ): boolean {
-    const actual = this.calculate(typeof input === "string" ? [input] : input);
+  ): Promise<boolean> {
+    const actual = await this.calculate(
+      typeof input === "string" ? [input] : input
+    );
     return this.checkResult(exampleName, actual, expected);
   }
 }

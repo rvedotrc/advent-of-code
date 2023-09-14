@@ -14,34 +14,34 @@ const partBuilders: Record<string, base.Day> = {
   day99,
 };
 
-const runTest = (
+const runTest = async (
   part: base.PartBuilder,
   _dayNum: string,
   partNum: string,
   inputBase: string
-): boolean => {
+): Promise<boolean> => {
   const inputFile = inputBase;
 
   let inputText: string[];
   try {
     inputText = fs.readFileSync(inputFile).toString("utf-8").trim().split("\n");
-  } catch (e) {
-    if (e.code === "ENOENT") {
+  } catch (e: unknown) {
+    if ((e as { code: unknown }).code === "ENOENT") {
       console.info(`  skip ${inputFile} # no input`);
       return true;
     }
     throw e;
   }
 
-  const actual = new part().calculate(inputText);
+  const actual = await new part().calculate(inputText);
 
   const outputFile = `${inputBase}.answer.part${partNum.toLowerCase()}`;
 
   let expected = "";
   try {
     expected = fs.readFileSync(outputFile).toString("utf-8").trim();
-  } catch (e) {
-    if (e.code === "ENOENT") {
+  } catch (e: unknown) {
+    if ((e as { code: unknown }).code === "ENOENT") {
       console.info(`  ???? ${inputFile} # `, { answer: actual });
       return true;
     }
@@ -57,7 +57,7 @@ const runTest = (
   return actual === expected;
 };
 
-const test = (): void => {
+const test = async (): Promise<void> => {
   let ok = true;
 
   for (const dayKey of Object.keys(partBuilders)) {
@@ -69,9 +69,13 @@ const test = (): void => {
       const partSuffix = partKey.replace("Part", "");
       console.log(`${dayKey} ${partKey}`);
 
-      ok &&= [new part().test()].flatMap(t => t).every(Boolean);
-      ok &&= runTest(part, daySuffix, partSuffix, `input/${dayKey}`);
-      ok &&= runTest(
+      ok &&= await new part()
+        .test()
+        .then(r => (Array.isArray(r) ? r : [r]))
+        .then(r => Promise.all(r))
+        .then(r => r.every(t => t));
+      ok &&= await runTest(part, daySuffix, partSuffix, `input/${dayKey}`);
+      ok &&= await runTest(
         part,
         daySuffix,
         partSuffix,
