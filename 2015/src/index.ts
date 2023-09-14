@@ -1,8 +1,10 @@
 import * as base from "./base";
+import * as day01 from "./day01";
 import * as day99 from "./day99";
 import * as fs from "fs";
 
 const partBuilders: Record<string, base.Day> = {
+  day01,
   day99,
 };
 
