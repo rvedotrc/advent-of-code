@@ -2,7 +2,7 @@
   "name": "advent-of-code-2021",
   "version": "1.0.0",
   "main": "dist/index.js",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "start": "node dist/index.js",
     "compile": "tsc --build",
