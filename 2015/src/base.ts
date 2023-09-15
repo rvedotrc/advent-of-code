@@ -10,11 +10,11 @@ export class Part {
     return true;
   }
 
-  protected checkResult(
+  protected async checkResult(
     testName: string,
     actual: string,
     expected: string
-  ): boolean {
+  ): Promise<boolean> {
     if (actual === expected) {
       console.log(`  pass ${testName} # `, { answer: expected });
       return true;
