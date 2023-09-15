@@ -57,16 +57,23 @@ const runTest = async (
   return actual === expected;
 };
 
-const test = async (): Promise<void> => {
+const test = async (
+  dayFilter: string | undefined,
+  partFilter: string | undefined
+): Promise<void> => {
   let ok = true;
 
   for (const dayKey of Object.keys(partBuilders)) {
-    const day = partBuilders[dayKey];
     const daySuffix = dayKey.replace("day", "");
+    if (dayFilter !== undefined && daySuffix !== dayFilter) continue;
+
+    const day = partBuilders[dayKey];
 
     for (const partKey of Object.keys(day)) {
-      const part = day[partKey];
       const partSuffix = partKey.replace("Part", "");
+      if (partFilter !== undefined && partSuffix !== partFilter) continue;
+
+      const part = day[partKey];
       console.log(`${dayKey} ${partKey}`);
 
       ok &&= await new part()
@@ -87,23 +94,4 @@ const test = async (): Promise<void> => {
   process.exit(ok ? 0 : 1);
 };
 
-const main = (argv: string[]): void => {
-  // const key = `day${argv[2]}part${argv[3]}`;
-  const day = partBuilders[`day${argv[2]}`];
-  if (!day) throw "No such day";
-
-  const partBuilder = day[`Part${argv[3]}`];
-  if (!partBuilder) throw "No such part";
-
-  const inputFile = argv[4] || `input/day${argv[2]}`;
-
-  const lines = fs.readFileSync(inputFile).toString("utf-8").trim().split("\n");
-  const answer = new partBuilder().calculate(lines);
-  console.log(answer);
-};
-
-if (process.argv.length == 2) {
-  test();
-} else {
-  main(process.argv);
-}
+test(process.argv[2], process.argv[3]);

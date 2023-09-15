@@ -17,14 +17,20 @@ yarn
 yarn build
 ```
 
-Running all tests, and all days + parts:
+Running all days + parts:
 
 ```
 yarn start
 ```
 
-Running a specific day / part with your input data, e.g. day 15 part 2:
+Running a specific day, e.g. day 3:
 
 ```
-yarn start 15 2
+yarn start 03
+```
+
+Running a specific day and part, e.g. day 3 part 2:
+
+```
+yarn start 03 2
 ```
