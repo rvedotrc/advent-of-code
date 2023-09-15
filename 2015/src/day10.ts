@@ -1,5 +1,41 @@
 import * as Base from "./base";
 
+const expand = function* (input: Iterator<string>): Iterator<string> {
+  let current = "";
+  let count = 0;
+
+  while (true) {
+    const n = input.next();
+    if (n.done) break;
+
+    const c = n.value;
+    // console.log({ current, count, c });
+
+    if (c !== current) {
+      if (current !== "")
+        for (const o of `${count}${current}`.split("")) yield o;
+      current = c;
+      count = 0;
+    }
+
+    ++count;
+    // console.log({ end: true, current, count, c });
+  }
+
+  if (current != "") {
+    for (const o of `${count}${current}`.split("")) yield o;
+  }
+};
+
+const iterableExpand = (input: Iterator<string>): IterableIterator<string> => {
+  const ex = expand(input);
+  const t = {
+    [Symbol.iterator]: () => t,
+    next: () => ex.next(),
+  };
+  return t;
+};
+
 export class Part1 extends Base.Part {
   async calculate(lines: string[]): Promise<string> {
     return this.lengthOf(
@@ -11,34 +47,7 @@ export class Part1 extends Base.Part {
     return 40;
   }
 
-  *expand(input: Iterator<string>): IterableIterator<string> {
-    let current = "";
-    let count = 0;
-
-    while (true) {
-      const n = input.next();
-      if (n.done) break;
-
-      const c = n.value;
-      // console.log({ current, count, c });
-
-      if (c !== current) {
-        if (current !== "")
-          for (const o of `${count}${current}`.split("")) yield o;
-        current = c;
-        count = 0;
-      }
-
-      ++count;
-      // console.log({ end: true, current, count, c });
-    }
-
-    if (current != "") {
-      for (const o of `${count}${current}`.split("")) yield o;
-    }
-  }
-
-  lengthOf(input: Iterator<string>): number {
+  lengthOf<T>(input: Iterator<T>): number {
     let length = 0;
     while (!input.next().done) ++length;
     return length;
@@ -52,7 +61,7 @@ export class Part1 extends Base.Part {
     input: IterableIterator<string>,
     n: number
   ): IterableIterator<string> {
-    return new Array(n).fill(0).reduce(iter => this.expand(iter), input);
+    return new Array(n).fill(0).reduce(iter => iterableExpand(iter), input);
   }
 
   testRunNTimes(input: string, n: number): string {
