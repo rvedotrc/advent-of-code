@@ -38,18 +38,9 @@ export class Part1 extends Base.Part {
     ];
 
     for (const line of lines) {
-      // console.log(JSON.stringify({ lightsBefore: lights }, null, 2));
       const command = this.lineToCommand(line);
-      const size = lights.reduce((n, l) => sizeOf(l.region) + n, 0);
-      // console.log(JSON.stringify({ line, n: lights.length, size, command }));
-      // console.log(JSON.stringify({ lightsBefore: lights }, null, 2));
-      if (size !== 1000000) {
-        throw "abort";
-      }
       lights = this.apply(command, lights);
     }
-
-    // console.log(JSON.stringify({ lightsFinal: lights }, null, 2));
 
     return this.score(lights).toString();
   }
@@ -81,8 +72,6 @@ export class Part1 extends Base.Part {
     return lights.flatMap(l => {
       const r = this.findOverlaps(l.region, command.region);
 
-      // console.log(JSON.stringify({ r }, null, 2));
-
       return [
         ...r.aAndNotB.map(region => ({ region, on: l.on })),
         ...r.aAndB.map(region => ({
@@ -98,11 +87,9 @@ export class Part1 extends Base.Part {
     b: Region,
     i = 0
   ): { aAndB: Region[]; aAndNotB: Region[] } {
-    // console.log(JSON.stringify({ findOverlaps: { i, a, b } }));
     if (i === a.length) return { aAndB: [a], aAndNotB: [] };
 
-    const xo = this.rangeOverlaps(a[i], b[i]);
-    // console.log(JSON.stringify({ a, b, i, xo }));
+    const rangeSplit = this.rangeOverlaps(a[i], b[i]);
 
     const r: ReturnType<Part1["findOverlaps"]> = {
       aAndB: [],
@@ -115,24 +102,12 @@ export class Part1 extends Base.Part {
       ...region.slice(i + 1),
     ];
 
-    r.aAndNotB.push(...xo.aAndNotB.map(range => set(a, range)));
+    r.aAndNotB.push(...rangeSplit.aAndNotB.map(range => set(a, range)));
 
-    for (const range of xo.aAndB) {
+    for (const range of rangeSplit.aAndB) {
       const o = this.findOverlaps(set(a, range), b, i + 1);
       r.aAndNotB.push(...o.aAndNotB);
       r.aAndB.push(...o.aAndB);
-    }
-
-    if (
-      sizeOf(a) !==
-      [...r.aAndB, ...r.aAndNotB].reduce((s, reg) => s + sizeOf(reg), 0)
-    ) {
-      console.error(
-        JSON.stringify({ badFindOverlaps: { i, a, b, r } }, null, 2)
-      );
-      throw "abort";
-      // } else {
-      // console.debug(JSON.stringify({ goodFindOverlaps: { i, a, b, r } }));
     }
 
     return r;
@@ -182,15 +157,8 @@ export class Part1 extends Base.Part {
             aAndB: [{ from: b.from, to: a.to }],
           };
 
-    const inSize = a.to - a.from;
-    const outSize = [...r.aAndB, ...r.aAndNotB].reduce(
-      (n, range) => n + (range.to - range.from),
-      0
-    );
-    // console.log(
-    //   JSON.stringify({ rangeOverlaps: { inSize, outSize, a, b, r } })
-    // );
-    if (inSize !== outSize) throw "abort";
+    r.aAndB = r.aAndB.filter(range => range.to > range.from);
+    r.aAndNotB = r.aAndNotB.filter(range => range.to > range.from);
 
     return r;
   }
@@ -211,8 +179,6 @@ export class Part2 extends Part1 {
   apply(command: Command, lights: Lights[]): Lights[] {
     return lights.flatMap(l => {
       const r = this.findOverlaps(l.region, command.region);
-
-      // console.log(JSON.stringify({ r }, null, 2));
 
       return [
         ...r.aAndNotB.map(region => ({ region, on: l.on })),
