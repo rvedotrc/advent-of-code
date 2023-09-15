@@ -3,6 +3,27 @@ import * as c from "node:crypto";
 import * as Base from "./base";
 import { Worker, isMainThread, parentPort } from "worker_threads";
 
+const find = (
+  start: number,
+  stop: number,
+  prefix: string,
+  part: number
+): number | undefined => {
+  for (let i = start; i < stop; ++i) {
+    const hash = c.createHash("md5");
+    hash.update(`${prefix}${i}`);
+    const d = hash.digest();
+
+    if (part == 1 && d.readUint16BE() === 0 && d.readUint8(2) < 16) {
+      return i;
+    } else if (part == 2 && d.readUint16BE() === 0 && d.readUint8(2) === 0) {
+      return i;
+    }
+  }
+
+  return undefined;
+};
+
 export class Part1 extends Base.Part {
   async calculate(lines: string[], part = 1): Promise<string> {
     return new Promise<string>(resolve => {
@@ -70,22 +91,7 @@ if (!isMainThread && parentPort) {
   parentPort.on("message", msg => {
     // console.log(`${workerName} << message`, { msg });
     const [prefix, start, stop] = msg as [string, number, number];
-
-    for (let i = start; i < stop; ++i) {
-      const hash = c.createHash("md5");
-      hash.update(`${prefix}${i}`);
-      const d = hash.digest();
-
-      if (part == 1 && d.readUint16BE() === 0 && d.readUint8(2) < 16) {
-        port.postMessage(i);
-        return;
-      } else if (part == 2 && d.readUint16BE() === 0 && d.readUint8(2) === 0) {
-        port.postMessage(i);
-        return;
-      }
-    }
-
-    port.postMessage(undefined);
+    port.postMessage(find(start, stop, prefix, part));
   });
   parentPort.on("messageerror", err =>
     console.log(`${workerName} << messageerror`, { err })
