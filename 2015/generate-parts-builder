@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -eu
+
+days=$( ls -1 src | grep '^day[0-9][0-9]\.ts$' | cut -c1-5 )
+
+srcFile=src/partBuilders.ts
+tmpFile=src/partBuilders.tmp
+> "$tmpFile"
+
+echo 'import * as base from "./base";' >> "$tmpFile"
+
+for day in $days ; do
+	echo "import * as $day from \"./$day\";" >> "$tmpFile"
+done
+
+echo >> "$tmpFile"
+
+echo 'export const partBuilders: Record<string, base.Day> = {' >> "$tmpFile"
+
+for day in $days ; do
+	echo "  $day," >> "$tmpFile"
+done
+
+echo '};' >> "$tmpFile"
+
+if ! diff "$tmpFile" "$srcFile" ; then
+  mv -v "$tmpFile" "$srcFile"
+else
+  rm -f "$tmpFile"
+fi
+
+exit 0

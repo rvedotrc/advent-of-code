@@ -4,11 +4,12 @@
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
+    "generate": "./generate-parts-builder",
     "start": "node dist/index.js",
     "compile": "tsc --build",
     "clean": "rm -rf node_modules",
     "prettier": "prettier --write src",
-    "build": "yarn prettier && yarn lint && yarn compile",
+    "build": "./generate-parts-builder && yarn prettier && yarn lint && yarn compile",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "lint:report": "yarn lint --format json --output-file .eslint/report.json"
   },
