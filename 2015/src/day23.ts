@@ -1,8 +1,25 @@
 import * as Immutable from "immutable";
 import * as Base from "./base";
 
-type Program = Immutable.List<Instruction>;
 type Register = string;
+
+class Program {
+  private readonly source: string[];
+  private readonly compiled: Instruction[];
+  private readonly compile: (line: string) => Instruction;
+
+  constructor(source: string[], compile: (line: string) => Instruction) {
+    this.source = source;
+    this.compiled = new Array(source.length);
+    this.compile = compile;
+  }
+
+  public get(ip: number): Instruction | undefined {
+    if (this.compiled[ip]) return this.compiled[ip];
+    if (!this.source[ip]) return undefined;
+    return (this.compiled[ip] = this.compile(this.source[ip]));
+  }
+}
 
 type Instruction =
   | HalfInstruction
@@ -89,7 +106,7 @@ export class Part1 extends Base.Part {
     const jioPattern = new RegExp(`^jio ${registerPattern}, (?<o>[+-][0-9]+)$`);
     let m: RegExpMatchArray | null;
 
-    const instructions = lines.map((line): Instruction => {
+    const compileFunction = (line: string): Instruction => {
       m = line.match(hlfPattern);
       if (m?.groups) return { type: "hlf", register: m.groups["r"] };
 
@@ -119,9 +136,9 @@ export class Part1 extends Base.Part {
         };
 
       throw `? ${line}`;
-    });
+    };
 
-    return Immutable.List(instructions);
+    return new Program(lines, compileFunction);
   }
 
   iterate(s: State): State | "end" {
