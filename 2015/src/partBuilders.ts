@@ -7,6 +7,7 @@ import * as day05 from "./day05";
 import * as day06 from "./day06";
 import * as day07 from "./day07";
 import * as day08 from "./day08";
+import * as day09 from "./day09";
 import * as day10 from "./day10";
 import * as day23 from "./day23";
 import * as day99 from "./day99";
@@ -20,6 +21,7 @@ export const partBuilders: Record<string, base.Day> = {
   day06,
   day07,
   day08,
+  day09,
   day10,
   day23,
   day99,
