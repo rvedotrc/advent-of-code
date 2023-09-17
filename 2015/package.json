@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.6.0",
+    "@types/stream-json": "^1.7.3",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
     "eslint": "7.7.0",
@@ -25,6 +26,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "immutable": "^5.0.0-beta.4"
+    "immutable": "^5.0.0-beta.4",
+    "stream-json": "^1.8.0"
   }
 }
