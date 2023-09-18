@@ -2,7 +2,7 @@ import * as c from "stream-chain";
 import * as Base from "./base";
 import { Readable } from "stream";
 import { parser } from "stream-json/Parser";
-import { emitter } from "stream-json/Emitter";
+import { Token } from "stream-json/filters/FilterBase";
 
 export class Part1 extends Base.Part {
   async calculate(lines: string[]): Promise<string> {
@@ -11,11 +11,11 @@ export class Part1 extends Base.Part {
 
       let sum = 0;
 
-      const pipeline = c.chain([
-        stringReader,
-        parser(),
-        emitter().on("numberValue", data => (sum += Number(data))),
-      ]);
+      const pipeline = c.chain([stringReader, parser()]);
+
+      pipeline.on("data", (data: Token) => {
+        if (data.name === "numberValue") sum += Number(data.value);
+      });
 
       pipeline.on("finish", () => {
         resolve(sum.toString());
@@ -41,34 +41,43 @@ export class Part1 extends Base.Part {
 
 export class Part2 extends Part1 {
   async calculate(lines: string[]): Promise<string> {
-    const data = JSON.parse(lines[0]);
-    return this.sum(data).toString();
-  }
+    return new Promise((resolve, reject) => {
+      const stringReader = new Readable();
 
-  sum(data: unknown): number {
-    if (typeof data === "number") return data;
-    if (typeof data === "string") return 0;
+      const sums = [{ sum: 0, isObject: false, seenRed: false }];
 
-    if (Array.isArray(data)) {
-      return data.reduce((sum, item) => sum + this.sum(item), 0);
-    }
+      const pipeline = c.chain([stringReader, parser()]);
 
-    if (data && typeof data === "object") {
-      const d = data as unknown as Record<string, unknown>;
+      pipeline.on("data", (data: Token) => {
+        if (data.name === "numberValue")
+          sums[sums.length - 1].sum += Number(data.value);
 
-      for (const v of Object.values(d)) {
-        if (v === "red") return 0;
-      }
+        if (data.name === "startArray")
+          sums.push({ sum: 0, isObject: false, seenRed: false });
+        if (data.name === "startObject")
+          sums.push({ sum: 0, isObject: true, seenRed: false });
 
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const v: any[] = Object.values(d);
-      return v.reduce(
-        (previousValue, currentValue) => previousValue + this.sum(currentValue),
-        0
-      );
-    }
+        if (data.name === "stringValue" && data.value === "red")
+          sums[sums.length - 1].seenRed = true;
+        if (data.name === "endObject" || data.name === "endArray") {
+          const last = sums.pop() as (typeof sums)[0];
+          if (!last.isObject || !last.seenRed)
+            sums[sums.length - 1].sum += last.sum;
+        }
+      });
 
-    throw "?";
+      pipeline.on("finish", () => {
+        resolve(sums[0].sum.toString());
+      });
+
+      pipeline.on("error", err => {
+        console.error({ err });
+        reject(err);
+      });
+
+      stringReader.push(lines[0]);
+      stringReader.push(null);
+    });
   }
 
   async test(): Promise<Promise<boolean> | Promise<boolean>[]> {
