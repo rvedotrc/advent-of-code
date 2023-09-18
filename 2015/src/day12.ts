@@ -2,37 +2,25 @@ import * as c from "stream-chain";
 import * as Base from "./base";
 import { Readable } from "stream";
 import { parser } from "stream-json/Parser";
-// import { streamValues } from "stream-json/streamers/StreamValues";
-import { pick } from "stream-json/filters/Pick";
+import { emitter } from "stream-json/Emitter";
 
 export class Part1 extends Base.Part {
   async calculate(lines: string[]): Promise<string> {
     return new Promise((resolve, reject) => {
       const stringReader = new Readable();
-      // s._read = () => {}; // redundant? see update below
 
       let sum = 0;
 
       const pipeline = c.chain([
         stringReader,
         parser(),
-        pick({
-          filter: (_stack, t) => {
-            if (t.name === "numberValue") sum += Number(t.value);
-            // console.log({ stack, t });
-            return false;
-          },
-        }),
+        emitter().on("numberValue", data => (sum += Number(data))),
       ]);
 
-      pipeline.on("close", () => console.log("close"));
       pipeline.on("finish", () => {
-        // console.log("finish");
         resolve(sum.toString());
       });
 
-      // pipeline.on("data", () => ++counter);
-      pipeline.on("end", () => console.log("end"));
       pipeline.on("error", err => {
         console.error({ err });
         reject(err);
