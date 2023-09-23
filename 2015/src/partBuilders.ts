@@ -13,6 +13,7 @@ import * as day11 from "./day11";
 import * as day12 from "./day12";
 import * as day13 from "./day13";
 import * as day14 from "./day14";
+import * as day17 from "./day17";
 import * as day23 from "./day23";
 import * as day99 from "./day99";
 
@@ -31,6 +32,7 @@ export const partBuilders: Record<string, base.Day> = {
   day12,
   day13,
   day14,
+  day17,
   day23,
   day99,
 };
